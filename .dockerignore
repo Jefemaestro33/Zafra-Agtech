@@ -1,0 +1,10 @@
+.venv/
+node_modules/
+data/
+__pycache__/
+.git/
+*.md
+docs/
+simulator/
+dashboard/dist/
+.env

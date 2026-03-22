@@ -13,8 +13,12 @@ from datetime import datetime, timedelta
 from contextlib import contextmanager
 from typing import Optional
 
+from pathlib import Path
+
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
 import psycopg2
@@ -614,9 +618,28 @@ def health():
 
 
 # ============================================================
+# STATIC FILES (dashboard React build)
+# ============================================================
+# Try relative to backend/ (local dev), then relative to /app (Docker)
+STATIC_DIR = Path(__file__).parent.parent / "dashboard" / "dist"
+if not STATIC_DIR.is_dir():
+    STATIC_DIR = Path("/app/dashboard/dist")
+if STATIC_DIR.is_dir():
+    app.mount("/assets", StaticFiles(directory=STATIC_DIR / "assets"), name="assets")
+
+    @app.get("/{path:path}")
+    def serve_spa(path: str):
+        """Serve React SPA — any non-API route returns index.html."""
+        file = STATIC_DIR / path
+        if file.is_file():
+            return FileResponse(file)
+        return FileResponse(STATIC_DIR / "index.html")
+
+
+# ============================================================
 # MAIN
 # ============================================================
 if __name__ == "__main__":
     import uvicorn
     port = int(os.environ.get("PORT", 8000))
-    uvicorn.run("backend.api:app", host="0.0.0.0", port=port, reload=True)
+    uvicorn.run("api:app", host="0.0.0.0", port=port, reload=True)
