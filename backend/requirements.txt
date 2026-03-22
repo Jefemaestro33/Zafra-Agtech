@@ -1,0 +1,11 @@
+fastapi
+uvicorn
+psycopg2-binary
+numpy
+scipy
+pandas
+scikit-learn
+anthropic
+requests
+python-jose[cryptography]
+schedule
