@@ -36,6 +36,7 @@ from alertas import (
     get_todos_nodos,
     get_tiempo_max_global,
 )
+from comparativo import analizar_bloques as cusum_analizar_bloques
 from llm_consultor import (
     diagnosticar_evento,
     generar_reporte_semanal,
@@ -439,7 +440,55 @@ def comparativo_predio(predio_id: int, dias: int = Query(30)):
             )
         resultado.append({"bloque": bloque, "dias": dias_data})
 
+    # Add CUSUM analysis
+    try:
+        with get_conn() as conn2:
+            cusum_results = cusum_analizar_bloques(conn2, predio_id, dias)
+        cusum_by_bloque = {r["bloque"]: r for r in cusum_results}
+        for item in resultado:
+            cr = cusum_by_bloque.get(item["bloque"])
+            if cr:
+                item["cusum"] = {
+                    "estado": cr["estado"],
+                    "desde_dia": cr["desde_dia"],
+                    "tipo": cr["tipo"],
+                    "magnitud": cr["magnitud"],
+                    "total_alarmas": cr["total_alarmas"],
+                    "s_pos": cr["cusum_h10"]["s_pos"],
+                    "s_neg": cr["cusum_h10"]["s_neg"],
+                    "umbral_h": cr["cusum_h10"]["umbral_h"],
+                    "alarmas": cr["cusum_h10"]["alarmas"],
+                }
+    except Exception as e:
+        pass  # CUSUM is optional, don't break the endpoint
+
     return resultado
+
+
+@app.post("/api/predios/{predio_id}/cusum")
+def cusum_predio(predio_id: int, dias: int = Query(180)):
+    with get_conn() as conn:
+        resultados = cusum_analizar_bloques(conn, predio_id, dias)
+    return {
+        "bloques": [
+            {
+                "bloque": r["bloque"],
+                "estado": r["estado"],
+                "desde_dia": r["desde_dia"],
+                "tipo": r["tipo"],
+                "magnitud": r["magnitud"],
+                "total_alarmas": r["total_alarmas"],
+                "cusum_h10": {
+                    "s_pos": r["cusum_h10"]["s_pos"],
+                    "s_neg": r["cusum_h10"]["s_neg"],
+                    "umbral_h": r["cusum_h10"]["umbral_h"],
+                    "media_baseline": r["cusum_h10"]["media_baseline"],
+                    "alarmas": r["cusum_h10"]["alarmas"],
+                },
+            }
+            for r in resultados
+        ]
+    }
 
 
 # ============================================================
