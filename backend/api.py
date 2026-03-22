@@ -37,6 +37,7 @@ from alertas import (
     get_tiempo_max_global,
 )
 from comparativo import analizar_bloques as cusum_analizar_bloques
+from modelo_microbioma import entrenar_todos as microbioma_entrenar, predecir_actual as microbioma_predecir, _modelos_cache as microbioma_cache
 from llm_consultor import (
     diagnosticar_evento,
     generar_reporte_semanal,
@@ -664,6 +665,51 @@ def crear_microbioma(m: MicrobiomaCreate):
         "snapshot_sensores": {
             "h10": h10, "h20": h20, "h30": h30, "t20": t20, "ec30": ec30,
         },
+    }
+
+
+# ============================================================
+# MICROBIOMA (GET + predicción)
+# ============================================================
+@app.get("/api/microbioma/nodo/{nodo_id}")
+def microbioma_nodo(nodo_id: int, limit: int = Query(20)):
+    rows = query(
+        """
+        SELECT fecha_muestreo, target, valor, unidad, metodo,
+               h10_momento, t20_momento, ec30_momento
+        FROM microbioma WHERE nodo_id = %s
+        ORDER BY fecha_muestreo DESC, target
+        LIMIT %s
+        """,
+        (nodo_id, limit),
+    )
+    return serialize(rows)
+
+
+@app.post("/api/microbioma/predecir/{nodo_id}")
+def microbioma_predecir_endpoint(nodo_id: int):
+    with get_conn() as conn:
+        if not microbioma_cache:
+            microbioma_entrenar(conn)
+        resultado = microbioma_predecir(conn, nodo_id, microbioma_cache)
+    if "error" in resultado:
+        raise HTTPException(404, resultado["error"])
+    return resultado
+
+
+@app.get("/api/microbioma/modelo")
+def microbioma_modelo_info():
+    if not microbioma_cache:
+        with get_conn() as conn:
+            microbioma_entrenar(conn)
+    return {
+        target: {
+            "r2": m["r2"],
+            "mae": m["mae"],
+            "feature_importance": m["feature_importance"],
+        }
+        for target, m in microbioma_cache.items()
+        if m is not None
     }
 
 
