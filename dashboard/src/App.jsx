@@ -54,33 +54,33 @@ export default function App() {
         </div>
       </header>
 
-      {/* Row 2 — Predio selector + tabs */}
-      <nav className="bg-green-600 overflow-x-auto">
-        <div className="max-w-7xl mx-auto px-4 flex items-center justify-between gap-4">
+      {/* Row 2 — Predio selector + tabs (scrollable on mobile) */}
+      <nav className="bg-green-600">
+        <div className="max-w-7xl mx-auto px-4 flex items-center gap-4">
           <div className="flex items-center gap-3 shrink-0 py-2">
             <select
               value={predioId}
               onChange={e => setPredioId(Number(e.target.value))}
-              className="text-sm rounded-lg px-3 py-1.5 bg-white/15 text-white border border-white/25 focus:outline-none focus:ring-2 focus:ring-white/40 [&>option]:text-gray-900"
+              className="text-sm rounded-lg px-3 py-1.5 bg-white/15 text-white border border-white/25 focus:outline-none focus:ring-2 focus:ring-white/40 [&>option]:text-gray-900 max-w-[140px] sm:max-w-none"
             >
               {predios?.map(p => (
                 <option key={p.predio_id} value={p.predio_id}>{p.nombre}</option>
               ))}
             </select>
             {predio && (
-              <span className="hidden md:inline text-xs text-white/70">
+              <span className="hidden lg:inline text-xs text-white/70">
                 {predio.cultivo} · {predio.tipo_suelo} · {predio.hectareas}ha
               </span>
             )}
           </div>
-          <div className="flex gap-0.5">
+          <div className="flex gap-0.5 overflow-x-auto scrollbar-none ml-auto">
             {tabs.map(t => (
               <NavLink
                 key={t.path}
                 to={t.path}
                 end={t.path === '/'}
                 className={({ isActive }) =>
-                  `flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
+                  `flex items-center gap-1.5 px-3 sm:px-4 py-2.5 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
                     isActive
                       ? 'border-white text-white'
                       : 'border-transparent text-white/70 hover:text-white hover:bg-white/10'

@@ -1,6 +1,7 @@
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useApi } from '../hooks/useApi'
-import { MapContainer, TileLayer, CircleMarker, Popup } from 'react-leaflet'
+import { MapContainer, TileLayer, CircleMarker, Popup, useMap } from 'react-leaflet'
 import KpiCard from '../components/KpiCard'
 import ScoreBadge from '../components/ScoreBadge'
 import Loading from '../components/Loading'
@@ -12,8 +13,20 @@ function scoreColor(score) {
   return '#22c55e'
 }
 
+const TILES = {
+  satelital: {
+    url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+    attribution: 'Esri',
+  },
+  mapa: {
+    url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+    attribution: '&copy; OpenStreetMap',
+  },
+}
+
 export default function OverviewView({ predioId }) {
   const { data, loading } = useApi(`/api/predios/${predioId}/overview`)
+  const [tileMode, setTileMode] = useState('satelital')
   const navigate = useNavigate()
 
   if (loading) return <Loading />
@@ -21,6 +34,7 @@ export default function OverviewView({ predioId }) {
 
   const { kpis, nodos, predio } = data
   const center = [predio.lat || 20.7005, predio.lon || -103.418]
+  const tile = TILES[tileMode]
 
   const scoreMaxColor = kpis.score_phytophthora_max >= 76 ? 'red'
     : kpis.score_phytophthora_max >= 51 ? 'orange'
@@ -29,7 +43,7 @@ export default function OverviewView({ predioId }) {
   return (
     <div className="space-y-6">
       {/* KPIs */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <KpiCard
           title="Nodos online"
           value={`${kpis.nodos_online}/${kpis.nodos_total}`}
@@ -59,15 +73,30 @@ export default function OverviewView({ predioId }) {
 
       {/* Map */}
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-        <div className="px-5 py-3 border-b border-gray-100">
+        <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between">
           <h2 className="text-sm font-semibold text-gray-700">Mapa de nodos — {predio.nombre}</h2>
+          <div className="flex gap-1">
+            <button
+              onClick={() => setTileMode('satelital')}
+              className={`text-xs px-2.5 py-1 rounded-md transition-colors ${
+                tileMode === 'satelital' ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+              }`}
+            >
+              Satelital
+            </button>
+            <button
+              onClick={() => setTileMode('mapa')}
+              className={`text-xs px-2.5 py-1 rounded-md transition-colors ${
+                tileMode === 'mapa' ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+              }`}
+            >
+              Mapa
+            </button>
+          </div>
         </div>
-        <div style={{ height: 400 }}>
+        <div className="min-h-[300px]" style={{ height: 400 }}>
           <MapContainer center={center} zoom={17} style={{ height: '100%', width: '100%' }} scrollWheelZoom={true}>
-            <TileLayer
-              attribution='&copy; OpenStreetMap'
-              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-            />
+            <TileLayer key={tileMode} attribution={tile.attribution} url={tile.url} />
             {nodos.map(n => (
               <CircleMarker
                 key={n.nodo_id}
@@ -101,7 +130,7 @@ export default function OverviewView({ predioId }) {
           <h2 className="text-sm font-semibold text-gray-700">Todos los nodos</h2>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="w-full text-sm min-w-[640px]">
             <thead className="bg-gray-50 text-gray-500 text-xs uppercase">
               <tr>
                 <th className="text-left px-5 py-2.5">Nodo</th>

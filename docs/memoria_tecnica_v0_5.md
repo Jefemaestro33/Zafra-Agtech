@@ -433,7 +433,7 @@ El LLM nunca toca la base de datos de series temporales. El Agente 1 comprime ho
 | firma_hidrica.txt | Cambio significativo en τ o velocidad infiltración | Interpreta cambios en estructura del suelo, correlaciona con tratamientos aplicados |
 | bioinsumos.txt | Comando /aplicar o condiciones óptimas detectadas | Evalúa si las condiciones de humedad, temperatura, y pronóstico climático (sin lluvia próximas 24h) son ideales para aplicar micorriza o Trichoderma |
 | reporte_semanal.txt | Lunes 7am automático | Resume tendencias de la semana, compara bloques, sugiere acciones para la semana entrante |
-| diagnostico_visual.txt | Foto enviada al bot de Telegram | Recibe imagen + contexto de sensores del nodo más cercano. Cruza diagnóstico visual (hoja, tallo) con datos de suelo para diagnóstico integrado. Distingue entre causas de suelo (anoxia, Phytophthora) y causas foliares (antracnosis, deficiencia) |
+| diagnostico_visual.txt | Foto subida desde dashboard | Recibe imagen + contexto de sensores del nodo más cercano. Cruza diagnóstico visual (hoja, tallo) con datos de suelo para diagnóstico integrado. Distingue entre causas de suelo (anoxia, Phytophthora) y causas foliares (antracnosis, deficiencia) |
 | reporte_agricultor.txt | Semanal, automático o bajo demanda | Genera resumen simplificado SIN tecnicismos para que el agrónomo reenvíe al agricultor por WhatsApp. Incluye: consumo de agua, estado general, alertas en lenguaje simple, próximas acciones recomendadas |
 
 ### 9.3 Flujo de decisión
@@ -441,80 +441,59 @@ El LLM nunca toca la base de datos de series temporales. El Agente 1 comprime ho
 | Condición | Acción | Frecuencia LLM |
 |-----------|--------|----------------|
 | Score Phytophthora < 50 | Log normal, sin alerta | Nunca |
-| Score Phytophthora 50-75 | Guardar evento → generar resumen → LLM → Telegram | Cada 12h |
-| Score Phytophthora > 75 | Guardar evento → generar resumen → LLM → Telegram | Inmediato |
+| Score Phytophthora 50-75 | Guardar evento → generar resumen → LLM → dashboard (Alertas IA) | Cada 12h |
+| Score Phytophthora > 75 | Guardar evento → generar resumen → LLM → dashboard + push WhatsApp al agrónomo | Inmediato |
 | CUSUM sin alarma | Resumen diario estándar (sin LLM) | Nunca |
-| CUSUM con alarma | Resumen con contexto → LLM → Telegram | 1 vez |
-| Reporte semanal | Resumen agregado → LLM → Telegram | 1/semana |
+| CUSUM con alarma | Resumen con contexto → LLM → dashboard + push WhatsApp | 1 vez |
+| Reporte semanal | Resumen agregado → LLM → dashboard + botón enviar al agricultor | 1/semana |
 
 ### 9.4 Fallback
 
-Si la API de Claude no responde después de 3 intentos con backoff exponencial (1s, 2s, 4s), el sistema envía la alerta cruda con datos numéricos al grupo de Telegram. El agrónomo pierde la interpretación pero no pierde la alerta.
+Si la API de Claude no responde después de 3 intentos con backoff exponencial (1s, 2s, 4s), el dashboard muestra la alerta cruda con datos numéricos sin diagnóstico IA. Si es alerta crítica (score >75), el push por WhatsApp se envía de todas formas con datos crudos.
 
 ---
 
-## 10. BOT DE TELEGRAM
+## 10. DASHBOARD WEB + API REST (v0.3 — reemplaza bot de Telegram)
 
-### 10.1 Grupo y roles
+### 10.1 Cambio de arquitectura
 
-| Nombre | Rol | Acceso |
-|--------|-----|--------|
-| Ernest (tú) | Admin | Todos los comandos + configuración de umbrales |
-| Salvador | Agrónomo campo | Todos los comandos operativos |
-| (Futuros agrónomos) | Agrónomo campo | Todos los comandos operativos |
-| (Investigadores CUCBA) | Observador | Solo /estado, /nodo, /firma (lectura) |
+La v0.1-v0.2 planteaba un bot de Telegram con 10 comandos. La v0.3+ lo reemplazó por un dashboard web completo (React + Tailwind) con API REST en Python. El dashboard es la fuente principal de información. Las notificaciones push (WhatsApp) solo se usan para alertas críticas.
 
-### 10.2 Comandos
+### 10.2 Stack del dashboard
 
-| Comando | Función | Ejemplo de respuesta |
-|---------|---------|---------------------|
-| /estado | Tabla resumen de todos los nodos | Humedad, temp, EC, batería, status online/offline por nodo |
-| /nodo {id} | Detalle técnico últimas 24h | Tendencias, anomalías, min/max, eventos |
-| /riesgo | Score Phytophthora de cada nodo | Score + factores contribuyentes + clasificación |
-| /firma {id} | Última firma hídrica | τ por profundidad, velocidad infiltración, breaking point |
-| /comparar | Diferencias tratamiento vs testigo | Δ por bloque, estado CUSUM, tendencia |
-| /regar | Qué nodos necesitan riego | Nodos debajo de breaking point, urgencia (bajo/medio/alto) |
-| /aplicar | Condiciones para bioinsumos | ¿Humedad y temp son ideales para aplicar micorriza/Trichoderma hoy? |
-| /registrar | Registrar tratamiento aplicado | Tipo, cantidad, nodo, notas |
-| /lab | Registrar resultado de laboratorio | qPCR, Solvita, fisicoquímico |
-| /reporte {semana} | Reporte semanal | PDF o texto largo con análisis integral |
+| Componente | Tecnología | Estado |
+|------------|------------|--------|
+| Backend API | Python + FastAPI (20 endpoints REST) | ✓ LISTO |
+| Frontend | React + Vite + Tailwind CSS v4 + Recharts + react-leaflet | ✓ LISTO |
+| Mapas | Leaflet + OpenStreetMap | ✓ LISTO |
+| Deploy | Dockerfile multi-stage, Railway, auto-deploy desde GitHub | ✓ LISTO |
+| URL | https://agtech-sistema-production.up.railway.app/ | ✓ LISTO |
+| Autenticación | JWT tokens (pendiente) | Pendiente |
+| Notificaciones push | WhatsApp para alertas críticas (pendiente) | Pendiente |
 
-### 10.3 Mensajes automáticos
+### 10.3 Vistas del dashboard (6)
 
-| Mensaje | Horario | Contenido |
-|---------|---------|-----------|
-| Resumen diario | 7:00 AM | Estado de nodos, quién necesita riego, score Phytophthora si >25, divergencias |
-| Reporte semanal | Lunes 8:00 AM | Tendencias de τ, comparativo trat/testigo, próximos muestreos, recomendaciones |
-| Alerta inmediata | Cuando ocurre | Score Phytophthora >75, nodo offline >30 min, batería <3.3V |
+| Vista | Ruta | Qué muestra | Estado |
+|-------|------|-------------|--------|
+| Overview | / | 4 KPIs + mapa Leaflet con 8 nodos coloreados por score + tabla de nodos clickeable | ✓ LISTO |
+| Nodo detalle | /nodo/:id | 6 metric cards + 3 gráficas Recharts (humedad 3 prof 24h, temp+EC 24h, h10 7d) + desglose score | ✓ LISTO |
+| Firma hídrica | /firma | 3 KPIs + placeholder (pendiente de firma_hidrica.py) | ✓ LISTO (placeholder) |
+| Comparativo | /comparativo | Línea trat vs testigo por bloque con selector 7/14/30/90d + delta promedio | ✓ LISTO |
+| Clima | /clima | 4 KPIs (datos reales de Nextipac) + barras precip + línea temp + área ETo | ✓ LISTO |
+| Alertas IA | /alertas | 3 KPIs + lista de alertas + placeholder para diagnóstico LLM | ✓ LISTO (placeholder LLM) |
 
-### 10.4 Formato de alertas con LLM
+### 10.4 Selector de predio multi-huerta
 
-Antes (solo Nivel 2):
-```
-⚠️ Nodo 3: riesgo Phytophthora ALTO (score 85).
-h10=48% VWC ×72h, T20=24°C. Considerar reducir riego.
-```
+La barra superior tiene un dropdown con todos los predios. Al seleccionar un predio, todas las vistas filtran por ese predio. La opción "Todos los predios" muestra vista global con cards resumen.
 
-Después (con Nivel 4 — LLM):
-```
-🔴 ALERTA — Bloque 2, Nodo 3
-Score Phytophthora: 85/100
+### 10.5 Roles y acceso (pendiente de implementar)
 
-DIAGNÓSTICO: Humedad sostenida a 48% VWC por 72h con
-temperatura óptima de 24°C. Caída del 62% en velocidad
-de infiltración sugiere saturación de macroporos. qPCR
-mostró incremento de 2.1× en P. cinnamomi.
-
-RECOMENDACIÓN 1: Suspender riego 72h mínimo. Permitir
-que h10 baje a 30% VWC antes de reanudar.
-
-RECOMENDACIÓN 2: Aplicar Trichoderma harzianum 2×10⁸
-UFC/árbol en drench cuando h10 esté en 30-40% VWC.
-
-REF: Ramírez-Gil et al. (2018), Scientia Horticulturae.
-
-Diagnóstico generado por IA. Verificar en campo.
-```
+| Rol | Quién | Acceso |
+|-----|-------|--------|
+| Admin | Ernest | Todas las vistas + configuración |
+| Agrónomo | Salvador, equipo | Todas las vistas + registrar tratamientos/lab |
+| Observador | Investigadores CUCBA | Solo lectura |
+| Agricultor | Productores (futuro) | Vista simplificada de su predio |
 
 ---
 
@@ -536,10 +515,9 @@ Diagnóstico generado por IA. Verificar en campo.
 
 | Variable | Uso |
 |----------|-----|
-| DATABASE_URL | PostgreSQL connection string |
-| ANTHROPIC_API_KEY | Claude API para llm_consultor.py |
-| TELEGRAM_BOT_TOKEN | Bot de Telegram |
-| TELEGRAM_GROUP_ID | ID del grupo "AgTech - Equipo Campo" |
+| DATABASE_URL | PostgreSQL connection string (referencia al servicio Postgres de Railway) |
+| ANTHROPIC_API_KEY | Claude API para llm_consultor.py y Claude Vision |
+| JWT_SECRET | Clave para tokens de autenticación del dashboard (pendiente) |
 
 > **FUTURO (VPS):** Las mismas variables van en un archivo `.env` que Docker Compose lee automáticamente. Se agrega: MQTT_HOST, MQTT_PORT, MQTT_USER, MQTT_PASS para Mosquitto.
 
@@ -657,7 +635,7 @@ Diagnóstico generado por IA. Verificar en campo.
 | 28 | Diagnóstico visual: foto en dashboard → Claude Vision + datos sensores → diagnóstico integrado | Pendiente |
 | 29 | Fallback si API falla | Pendiente |
 | 30 | Reporte semanal automático con IA | Pendiente |
-| 31 | Comandos Telegram: /registrar, /lab, /reporte | Pendiente |
+| 31 | Formularios en dashboard: registrar tratamiento, registrar resultado de lab | Pendiente |
 
 ### Semanas 9-10 (17 - 31 mayo)
 
@@ -834,7 +812,7 @@ Railway permite deployar con un push, tiene free tier generoso, SSL automático,
 
 **Por qué migrar a Docker/VPS cuando llegue el hardware (junio 2026):**
 
-Razón 1 — Costo. En producción se necesitan al menos 5 servicios corriendo 24/7: PostgreSQL/TimescaleDB, Mosquitto, ingesta.py, alertas.py, y el bot de Telegram. En Railway cada servicio activo cuesta ~$5-7 USD/mes = $25-35 USD/mes total. Un VPS de DigitalOcean con 1GB RAM corre los 5 juntos por $6 USD/mes. Con 8 nodos generando datos cada 5 minutos la diferencia se mantiene porque el cuello de botella es RAM, no compute, y 1GB sobra.
+Razón 1 — Costo. En producción se necesitan al menos 5 servicios corriendo 24/7: PostgreSQL/TimescaleDB, Mosquitto, ingesta.py, alertas.py, y la API del dashboard. En Railway cada servicio activo cuesta ~$5-7 USD/mes = $25-35 USD/mes total. Un VPS de DigitalOcean con 1GB RAM corre los 5 juntos por $6 USD/mes. Con 8 nodos generando datos cada 5 minutos la diferencia se mantiene porque el cuello de botella es RAM, no compute, y 1GB sobra.
 
 Razón 2 — Mosquitto (MQTT). El gateway RAK con 4G publica datos por MQTT. Se necesita un broker MQTT corriendo permanentemente escuchando en puerto 8883 con TLS. Railway no está diseñado para servicios que escuchan en puertos custom con protocolos que no son HTTP. Se pueden hacer workarounds con WebSockets pero es pelear contra la plataforma.
 
@@ -905,7 +883,7 @@ De la competencia se integraron 5 funcionalidades al sistema:
 |---------|---------|
 | Inspiración | Plantix, Agrio (concepto — ambos funcionan mal para aguacate) |
 | Implementación | Extensión de llm_consultor.py con Claude Vision |
-| Funcionalidad | Salvador manda foto de hoja al bot de Telegram → sistema la envía a Claude Vision junto con datos de sensores del nodo más cercano → diagnóstico integrado visual + contexto de suelo |
+| Funcionalidad | Salvador sube foto de hoja desde el dashboard → sistema la envía a Claude Vision junto con datos de sensores del nodo más cercano → diagnóstico integrado visual + contexto de suelo |
 | Diferenciador | Nadie hace este cruce. Plantix diagnostica solo por foto. Nosotros: foto + 72h de datos de sensores |
 | Ejemplo | "Mancha en hoja + h10=48% ×72h + score Phyto 72 = consistente con anoxia radicular, no antracnosis" |
 | Costo | ~$0.01 por consulta adicional |
