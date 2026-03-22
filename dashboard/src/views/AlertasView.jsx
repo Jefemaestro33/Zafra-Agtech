@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useApi } from '../hooks/useApi'
+import { Bell, Calendar, BarChart3, CheckCircle, BrainCircuit, Send, FileText, Copy, Check, Loader2, ShieldAlert, Droplets, WifiOff, BatteryWarning } from 'lucide-react'
 import KpiCard from '../components/KpiCard'
 import EmptyState from '../components/EmptyState'
 import Loading from '../components/Loading'
@@ -14,30 +15,35 @@ function timeAgo(dateStr) {
   return `hace ${days}d`
 }
 
-function alertBorder(tipo) {
-  if (tipo?.includes('phytophthora')) return 'border-l-red-500'
-  if (tipo?.includes('riego')) return 'border-l-orange-500'
-  if (tipo?.includes('offline')) return 'border-l-blue-500'
-  if (tipo?.includes('bateria')) return 'border-l-yellow-500'
-  return 'border-l-gray-300'
+const alertConfig = {
+  alerta_phytophthora: {
+    border: 'var(--color-accent-red)',
+    bg: 'var(--color-glow-red)',
+    Icon: ShieldAlert,
+    label: 'Alerta Phytophthora',
+  },
+  necesita_riego: {
+    border: 'var(--color-accent-amber)',
+    bg: 'var(--color-glow-amber)',
+    Icon: Droplets,
+    label: 'Necesita riego',
+  },
+  offline: {
+    border: 'var(--color-accent-blue)',
+    bg: 'var(--color-glow-cyan)',
+    Icon: WifiOff,
+    label: 'Sensor offline',
+  },
+  bateria_baja: {
+    border: 'var(--color-accent-amber)',
+    bg: 'var(--color-glow-amber)',
+    Icon: BatteryWarning,
+    label: 'Batería baja',
+  },
 }
 
-function alertTitle(tipo) {
-  const map = {
-    alerta_phytophthora: 'Alerta Phytophthora',
-    necesita_riego: 'Necesita riego',
-    offline: 'Sensor offline',
-    bateria_baja: 'Batería baja',
-  }
-  return map[tipo] || tipo
-}
-
-function alertEmoji(tipo) {
-  if (tipo?.includes('phytophthora')) return '🔴'
-  if (tipo?.includes('riego')) return '🟠'
-  if (tipo?.includes('offline')) return '🔵'
-  if (tipo?.includes('bateria')) return '🟡'
-  return '⚪'
+function getAlertConfig(tipo) {
+  return alertConfig[tipo] || alertConfig.offline
 }
 
 function formatDatos(datos) {
@@ -66,40 +72,35 @@ function getDiagnostico(datos) {
 
 function DiagnosticoSection({ diag }) {
   if (!diag) return null
+  const sections = [
+    { key: 'diagnostico', label: 'DIAGNÓSTICO', color: 'var(--color-accent-red)', bg: 'var(--color-glow-red)', borderColor: 'rgba(239,68,68,0.2)' },
+    { key: 'recomendacion_1', label: 'RECOMENDACIÓN 1', color: 'var(--color-accent-green)', bg: 'var(--color-glow-green)', borderColor: 'rgba(16,185,129,0.2)' },
+    { key: 'recomendacion_2', label: 'RECOMENDACIÓN 2', color: 'var(--color-accent-green)', bg: 'var(--color-glow-green)', borderColor: 'rgba(16,185,129,0.2)' },
+    { key: 'referencia', label: 'REFERENCIA', color: 'var(--color-accent-blue)', bg: 'var(--color-glow-cyan)', borderColor: 'rgba(59,130,246,0.2)' },
+  ]
+
   return (
     <div className="mt-3 space-y-2">
-      {diag.diagnostico && (
-        <div className="px-3 py-2 bg-red-50 rounded-lg border border-red-100">
-          <p className="text-xs font-semibold text-red-700 mb-1">DIAGNÓSTICO</p>
-          <p className="text-sm text-gray-800">{diag.diagnostico}</p>
+      {sections.map(s => diag[s.key] && (
+        <div
+          key={s.key}
+          className="px-4 py-3 rounded-xl"
+          style={{ background: s.bg, border: `1px solid ${s.borderColor}` }}
+        >
+          <p className="text-[11px] font-bold mb-1" style={{ color: s.color }}>{s.label}</p>
+          <p className="text-sm leading-relaxed" style={{ color: 'var(--color-text-primary)' }}>
+            {diag[s.key]}
+          </p>
         </div>
-      )}
-      {diag.recomendacion_1 && (
-        <div className="px-3 py-2 bg-green-50 rounded-lg border border-green-100">
-          <p className="text-xs font-semibold text-green-700 mb-1">RECOMENDACIÓN 1</p>
-          <p className="text-sm text-gray-800">{diag.recomendacion_1}</p>
-        </div>
-      )}
-      {diag.recomendacion_2 && (
-        <div className="px-3 py-2 bg-green-50 rounded-lg border border-green-100">
-          <p className="text-xs font-semibold text-green-700 mb-1">RECOMENDACIÓN 2</p>
-          <p className="text-sm text-gray-800">{diag.recomendacion_2}</p>
-        </div>
-      )}
-      {diag.referencia && (
-        <div className="px-3 py-2 bg-blue-50 rounded-lg border border-blue-100">
-          <p className="text-xs font-semibold text-blue-700 mb-1">REFERENCIA</p>
-          <p className="text-sm text-gray-700 italic">{diag.referencia}</p>
-        </div>
-      )}
+      ))}
       {diag.raw && !diag.diagnostico && (
-        <div className="px-3 py-2 bg-gray-50 rounded-lg border border-gray-200">
-          <p className="text-sm text-gray-700 whitespace-pre-wrap">{diag.raw}</p>
+        <div className="px-4 py-3 rounded-xl" style={{ background: 'var(--color-surface-3)', border: '1px solid var(--color-border)' }}>
+          <p className="text-sm whitespace-pre-wrap" style={{ color: 'var(--color-text-secondary)' }}>{diag.raw}</p>
         </div>
       )}
       {diag.raw_response && !diag.diagnostico && !diag.raw && (
-        <div className="px-3 py-2 bg-gray-50 rounded-lg border border-gray-200">
-          <p className="text-sm text-gray-700 whitespace-pre-wrap">{diag.raw_response}</p>
+        <div className="px-4 py-3 rounded-xl" style={{ background: 'var(--color-surface-3)', border: '1px solid var(--color-border)' }}>
+          <p className="text-sm whitespace-pre-wrap" style={{ color: 'var(--color-text-secondary)' }}>{diag.raw_response}</p>
         </div>
       )}
     </div>
@@ -114,6 +115,8 @@ function AlertaCard({ a, onDiagnosticoGenerated }) {
   const [copied, setCopied] = useState(false)
 
   const diag = localDiag || getDiagnostico(a.datos)
+  const config = getAlertConfig(a.tipo)
+  const AlertIcon = config.Icon
 
   const handleGenerarDiagnostico = async () => {
     setLoadingDiag(true)
@@ -131,9 +134,8 @@ function AlertaCard({ a, onDiagnosticoGenerated }) {
 
   const handleEnviarSalvador = () => {
     const d = diag || {}
-    const emoji = alertEmoji(a.tipo)
     const text = [
-      `${emoji} *${alertTitle(a.tipo)}* — ${a.nombre || `Nodo ${a.nodo_id}`}`,
+      `*${config.label}* — ${a.nombre || `Nodo ${a.nodo_id}`}`,
       '',
       d.diagnostico ? `*DIAGNÓSTICO:* ${d.diagnostico}` : '',
       d.recomendacion_1 ? `*RECOMENDACIÓN 1:* ${d.recomendacion_1}` : '',
@@ -142,7 +144,6 @@ function AlertaCard({ a, onDiagnosticoGenerated }) {
       '',
       '_Diagnóstico generado por IA. Verificar en campo._',
     ].filter(Boolean).join('\n')
-
     navigator.clipboard.writeText(text).then(() => {
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
@@ -171,73 +172,124 @@ function AlertaCard({ a, onDiagnosticoGenerated }) {
     }
   }
 
+  const isCritical = a.tipo === 'alerta_phytophthora'
+
   return (
-    <div className={`bg-white rounded-xl border border-gray-200 border-l-4 ${alertBorder(a.tipo)} p-5`}>
-      <div className="flex items-start justify-between">
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2 mb-1">
-            <h3 className="text-sm font-semibold text-gray-800">{alertTitle(a.tipo)}</h3>
-            <span className="text-xs text-gray-400">{a.nombre || `Nodo ${a.nodo_id}`}</span>
-            <span className="text-xs text-gray-400">·</span>
-            <span className="text-xs text-gray-400">{timeAgo(a.tiempo)}</span>
+    <div
+      className={`rounded-2xl overflow-hidden transition-all duration-200 ${isCritical ? 'pulse-critical' : ''}`}
+      style={{
+        background: 'var(--color-surface-2)',
+        border: '1px solid var(--color-border)',
+        borderLeft: `4px solid ${config.border}`,
+      }}
+    >
+      <div className="p-5">
+        <div className="flex items-start gap-4">
+          <div
+            className="rounded-xl p-2.5 shrink-0"
+            style={{ background: config.bg, border: `1px solid ${config.border}33` }}
+          >
+            <AlertIcon size={18} style={{ color: config.border }} />
           </div>
-          <p className="text-xs text-gray-500 mt-1 line-clamp-2">{formatDatos(a.datos)}</p>
-
-          {/* Diagnóstico IA */}
-          {diag ? (
-            <DiagnosticoSection diag={diag} />
-          ) : (
-            <div className="mt-3">
-              <button
-                onClick={handleGenerarDiagnostico}
-                disabled={loadingDiag}
-                className="text-xs px-3 py-1.5 rounded-lg bg-green-600 text-white hover:bg-green-700 transition-colors disabled:opacity-50"
-              >
-                {loadingDiag ? (
-                  <span className="flex items-center gap-1.5">
-                    <span className="animate-spin inline-block w-3 h-3 border-2 border-white border-t-transparent rounded-full" />
-                    Generando diagnóstico...
-                  </span>
-                ) : (
-                  'Generar diagnóstico IA'
-                )}
-              </button>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h3 className="text-sm font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+                {config.label}
+              </h3>
+              <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
+                {a.nombre || `Nodo ${a.nodo_id}`}
+              </span>
+              <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>·</span>
+              <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
+                {timeAgo(a.tiempo)}
+              </span>
             </div>
-          )}
+            <p className="text-xs mt-1.5 line-clamp-2" style={{ color: 'var(--color-text-muted)' }}>
+              {formatDatos(a.datos)}
+            </p>
 
-          {/* Reporte agricultor */}
-          {reporte && (
-            <div className="mt-3 px-3 py-2 bg-yellow-50 rounded-lg border border-yellow-100">
-              <div className="flex items-center justify-between mb-1">
-                <p className="text-xs font-semibold text-yellow-700">REPORTE PARA AGRICULTOR</p>
-                <button onClick={handleCopiarReporte} className="text-xs text-yellow-600 hover:text-yellow-800">
-                  {copied ? 'Copiado' : 'Copiar'}
+            {diag ? (
+              <DiagnosticoSection diag={diag} />
+            ) : (
+              <div className="mt-3">
+                <button
+                  onClick={handleGenerarDiagnostico}
+                  disabled={loadingDiag}
+                  className="flex items-center gap-2 text-xs px-4 py-2 rounded-xl font-medium transition-all duration-200 disabled:opacity-50"
+                  style={{
+                    background: 'var(--color-accent-green-dim)',
+                    color: 'var(--color-accent-green)',
+                    border: '1px solid rgba(16,185,129,0.3)',
+                  }}
+                >
+                  {loadingDiag ? (
+                    <>
+                      <Loader2 size={14} className="animate-spin" />
+                      Generando diagnóstico...
+                    </>
+                  ) : (
+                    <>
+                      <BrainCircuit size={14} />
+                      Generar diagnóstico IA
+                    </>
+                  )}
                 </button>
               </div>
-              <p className="text-sm text-gray-800 whitespace-pre-wrap">{reporte}</p>
-            </div>
-          )}
+            )}
+
+            {reporte && (
+              <div
+                className="mt-3 px-4 py-3 rounded-xl"
+                style={{ background: 'var(--color-glow-amber)', border: '1px solid rgba(245,158,11,0.2)' }}
+              >
+                <div className="flex items-center justify-between mb-1">
+                  <p className="text-[11px] font-bold" style={{ color: 'var(--color-accent-amber)' }}>REPORTE PARA AGRICULTOR</p>
+                  <button
+                    onClick={handleCopiarReporte}
+                    className="flex items-center gap-1 text-xs"
+                    style={{ color: 'var(--color-accent-amber)' }}
+                  >
+                    {copied ? <Check size={12} /> : <Copy size={12} />}
+                    {copied ? 'Copiado' : 'Copiar'}
+                  </button>
+                </div>
+                <p className="text-sm whitespace-pre-wrap leading-relaxed" style={{ color: 'var(--color-text-primary)' }}>
+                  {reporte}
+                </p>
+              </div>
+            )}
+          </div>
         </div>
-      </div>
-      <div className="flex gap-2 mt-3">
-        <button
-          onClick={handleEnviarSalvador}
-          disabled={!diag}
-          className={`text-xs px-3 py-1.5 rounded-lg border transition-colors ${
-            diag
-              ? 'border-green-200 text-green-700 bg-green-50 hover:bg-green-100'
-              : 'border-gray-200 text-gray-400 cursor-not-allowed'
-          }`}
-        >
-          {copied ? 'Copiado al clipboard' : 'Enviar a Salvador'}
-        </button>
-        <button
-          onClick={handleGenerarReporte}
-          disabled={loadingReporte}
-          className="text-xs px-3 py-1.5 rounded-lg border border-blue-200 text-blue-700 bg-blue-50 hover:bg-blue-100 transition-colors disabled:opacity-50"
-        >
-          {loadingReporte ? 'Generando...' : 'Generar reporte'}
-        </button>
+
+        {/* Action buttons */}
+        <div className="flex gap-2 mt-4 ml-14">
+          <button
+            onClick={handleEnviarSalvador}
+            disabled={!diag}
+            className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg font-medium transition-all duration-200 disabled:opacity-30"
+            style={{
+              background: diag ? 'var(--color-accent-green-dim)' : 'var(--color-surface-3)',
+              color: diag ? 'var(--color-accent-green)' : 'var(--color-text-muted)',
+              border: `1px solid ${diag ? 'rgba(16,185,129,0.3)' : 'var(--color-border)'}`,
+            }}
+          >
+            {copied ? <Check size={12} /> : <Send size={12} />}
+            {copied ? 'Copiado' : 'Enviar a Salvador'}
+          </button>
+          <button
+            onClick={handleGenerarReporte}
+            disabled={loadingReporte}
+            className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg font-medium transition-all duration-200 disabled:opacity-50"
+            style={{
+              background: 'var(--color-glow-cyan)',
+              color: 'var(--color-accent-cyan)',
+              border: '1px solid rgba(34,211,238,0.2)',
+            }}
+          >
+            {loadingReporte ? <Loader2 size={12} className="animate-spin" /> : <FileText size={12} />}
+            {loadingReporte ? 'Generando...' : 'Generar reporte'}
+          </button>
+        </div>
       </div>
     </div>
   )
@@ -255,24 +307,30 @@ export default function AlertasView({ predioId }) {
 
   return (
     <div className="space-y-6">
-      {/* KPIs */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <KpiCard title="Alertas activas" value={alertas?.length || 0} icon="🔔" color={alertas?.length > 0 ? 'red' : 'green'} />
-        <KpiCard title="Alertas hoy" value={alertasHoy} icon="📅" color="blue" />
-        <KpiCard title="Alertas esta semana" value={alertasSemana} icon="📊" color="yellow" />
+        <div className="animate-in stagger-1">
+          <KpiCard title="Alertas activas" value={alertas?.length || 0} icon={Bell} color={alertas?.length > 0 ? 'red' : 'green'} />
+        </div>
+        <div className="animate-in stagger-2">
+          <KpiCard title="Alertas hoy" value={alertasHoy} icon={Calendar} color="blue" />
+        </div>
+        <div className="animate-in stagger-3">
+          <KpiCard title="Alertas esta semana" value={alertasSemana} icon={BarChart3} color="yellow" />
+        </div>
       </div>
 
-      {/* Alert list */}
       {(!alertas || alertas.length === 0) ? (
         <EmptyState
-          icon="✅"
+          icon={CheckCircle}
           title="Sin alertas activas"
           description="Todos los nodos operan dentro de parámetros normales. Las alertas se generan automáticamente cuando el motor de reglas detecta condiciones de riesgo."
         />
       ) : (
         <div className="space-y-3">
-          {alertas.map(a => (
-            <AlertaCard key={a.id} a={a} onDiagnosticoGenerated={refetch} />
+          {alertas.map((a, i) => (
+            <div key={a.id} className={`animate-in stagger-${Math.min(i + 1, 6)}`}>
+              <AlertaCard a={a} onDiagnosticoGenerated={refetch} />
+            </div>
           ))}
         </div>
       )}

@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useApi } from '../hooks/useApi'
-import { MapContainer, TileLayer, CircleMarker, Popup, useMap } from 'react-leaflet'
+import { MapContainer, TileLayer, CircleMarker, Popup } from 'react-leaflet'
+import { Satellite, Map, Radio, Droplets, Thermometer, Battery, Wifi, WifiOff } from 'lucide-react'
 import KpiCard from '../components/KpiCard'
 import ScoreBadge from '../components/ScoreBadge'
 import Loading from '../components/Loading'
@@ -9,8 +10,15 @@ import Loading from '../components/Loading'
 function scoreColor(score) {
   if (score >= 76) return '#ef4444'
   if (score >= 51) return '#f97316'
-  if (score >= 26) return '#eab308'
-  return '#22c55e'
+  if (score >= 26) return '#f59e0b'
+  return '#10b981'
+}
+
+function scoreGlow(score) {
+  if (score >= 76) return '0 0 12px rgba(239,68,68,0.5)'
+  if (score >= 51) return '0 0 10px rgba(249,115,22,0.4)'
+  if (score >= 26) return '0 0 8px rgba(245,158,11,0.3)'
+  return '0 0 8px rgba(16,185,129,0.3)'
 }
 
 const TILES = {
@@ -44,57 +52,78 @@ export default function OverviewView({ predioId }) {
     <div className="space-y-6">
       {/* KPIs */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <KpiCard
-          title="Nodos online"
-          value={`${kpis.nodos_online}/${kpis.nodos_total}`}
-          icon="📡"
-          color={kpis.nodos_online === kpis.nodos_total ? 'green' : 'red'}
-        />
-        <KpiCard
-          title="Score Phytophthora máx."
-          value={kpis.score_phytophthora_max}
-          subtitle={kpis.score_phytophthora_max >= 76 ? 'CRÍTICO' : kpis.score_phytophthora_max >= 51 ? 'ALTO' : kpis.score_phytophthora_max >= 26 ? 'MODERADO' : 'BAJO'}
-          icon="🦠"
-          color={scoreMaxColor}
-        />
-        <KpiCard
-          title="Necesitan riego"
-          value={kpis.nodos_necesitan_riego}
-          icon="💧"
-          color={kpis.nodos_necesitan_riego > 0 ? 'orange' : 'blue'}
-        />
-        <KpiCard
-          title="ETo del día"
-          value={`${kpis.eto_dia_mm} mm`}
-          icon="☀️"
-          color="yellow"
-        />
+        <div className="animate-in stagger-1">
+          <KpiCard
+            title="Nodos online"
+            value={`${kpis.nodos_online}/${kpis.nodos_total}`}
+            icon={Radio}
+            color={kpis.nodos_online === kpis.nodos_total ? 'green' : 'red'}
+            subtitle={kpis.nodos_online === kpis.nodos_total ? 'Todos conectados' : `${kpis.nodos_total - kpis.nodos_online} offline`}
+          />
+        </div>
+        <div className="animate-in stagger-2">
+          <KpiCard
+            title="Score Phytophthora máx."
+            value={kpis.score_phytophthora_max}
+            subtitle={kpis.score_phytophthora_max >= 76 ? 'CRÍTICO — Acción inmediata' : kpis.score_phytophthora_max >= 51 ? 'ALTO — Monitorear' : kpis.score_phytophthora_max >= 26 ? 'MODERADO' : 'BAJO — Normal'}
+            icon="🦠"
+            color={scoreMaxColor}
+          />
+        </div>
+        <div className="animate-in stagger-3">
+          <KpiCard
+            title="Necesitan riego"
+            value={kpis.nodos_necesitan_riego}
+            icon={Droplets}
+            color={kpis.nodos_necesitan_riego > 0 ? 'orange' : 'blue'}
+            subtitle={kpis.nodos_necesitan_riego > 0 ? 'Programar riego' : 'Sin necesidad'}
+          />
+        </div>
+        <div className="animate-in stagger-4">
+          <KpiCard
+            title="ETo del día"
+            value={`${kpis.eto_dia_mm} mm`}
+            icon="☀️"
+            color="yellow"
+            subtitle="Evapotranspiración referencia"
+          />
+        </div>
       </div>
 
       {/* Map */}
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-        <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-gray-700">Mapa de nodos — {predio.nombre}</h2>
+      <div
+        className="rounded-2xl overflow-hidden animate-in stagger-3"
+        style={{ background: 'var(--color-surface-2)', border: '1px solid var(--color-border)' }}
+      >
+        <div
+          className="px-5 py-3 flex items-center justify-between"
+          style={{ borderBottom: '1px solid var(--color-border)' }}
+        >
+          <h2 className="text-sm font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+            Mapa de nodos — {predio.nombre}
+          </h2>
           <div className="flex gap-1">
-            <button
-              onClick={() => setTileMode('satelital')}
-              className={`text-xs px-2.5 py-1 rounded-md transition-colors ${
-                tileMode === 'satelital' ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
-              }`}
-            >
-              Satelital
-            </button>
-            <button
-              onClick={() => setTileMode('mapa')}
-              className={`text-xs px-2.5 py-1 rounded-md transition-colors ${
-                tileMode === 'mapa' ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
-              }`}
-            >
-              Mapa
-            </button>
+            {[
+              { key: 'satelital', label: 'Satelital', Icon: Satellite },
+              { key: 'mapa', label: 'Mapa', Icon: Map },
+            ].map(m => (
+              <button
+                key={m.key}
+                onClick={() => setTileMode(m.key)}
+                className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg transition-all duration-200"
+                style={{
+                  background: tileMode === m.key ? 'var(--color-accent-green-dim)' : 'var(--color-surface-3)',
+                  color: tileMode === m.key ? 'var(--color-accent-green)' : 'var(--color-text-muted)',
+                  border: `1px solid ${tileMode === m.key ? 'rgba(16,185,129,0.3)' : 'var(--color-border)'}`,
+                }}
+              >
+                <m.Icon size={12} />
+                {m.label}
+              </button>
+            ))}
           </div>
         </div>
-        <div className="min-h-[300px]" style={{ height: 400 }}>
+        <div style={{ height: 420 }}>
           <MapContainer center={center} zoom={17} style={{ height: '100%', width: '100%' }} scrollWheelZoom={true}>
             <TileLayer key={tileMode} attribution={tile.attribution} url={tile.url} />
             {nodos.map(n => (
@@ -104,18 +133,20 @@ export default function OverviewView({ predioId }) {
                 radius={14}
                 pathOptions={{
                   fillColor: scoreColor(n.score_phytophthora),
-                  color: '#fff',
+                  color: 'rgba(255,255,255,0.6)',
                   weight: 2,
-                  fillOpacity: 0.85,
+                  fillOpacity: 0.9,
                 }}
                 eventHandlers={{ click: () => navigate(`/nodo/${n.nodo_id}`) }}
               >
                 <Popup>
-                  <div className="text-sm">
-                    <strong>{n.nombre}</strong><br />
-                    Score: {n.score_phytophthora} ({n.nivel})<br />
-                    h10: {n.ultima_lectura?.h10_avg?.toFixed(1)}%<br />
-                    t20: {n.ultima_lectura?.t20?.toFixed(1)}°C
+                  <div style={{ fontFamily: 'Plus Jakarta Sans, sans-serif', fontSize: 13 }}>
+                    <strong style={{ color: 'var(--color-text-primary)' }}>{n.nombre}</strong>
+                    <div style={{ marginTop: 6, display: 'flex', flexDirection: 'column', gap: 3 }}>
+                      <span>Score: <strong style={{ color: scoreColor(n.score_phytophthora) }}>{n.score_phytophthora}</strong> ({n.nivel})</span>
+                      <span>h10: {n.ultima_lectura?.h10_avg?.toFixed(1)}% VWC</span>
+                      <span>t20: {n.ultima_lectura?.t20?.toFixed(1)}°C</span>
+                    </div>
                   </div>
                 </Popup>
               </CircleMarker>
@@ -125,44 +156,101 @@ export default function OverviewView({ predioId }) {
       </div>
 
       {/* Table */}
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-        <div className="px-5 py-3 border-b border-gray-100">
-          <h2 className="text-sm font-semibold text-gray-700">Todos los nodos</h2>
+      <div
+        className="rounded-2xl overflow-hidden animate-in stagger-4"
+        style={{ background: 'var(--color-surface-2)', border: '1px solid var(--color-border)' }}
+      >
+        <div
+          className="px-5 py-3 flex items-center justify-between"
+          style={{ borderBottom: '1px solid var(--color-border)' }}
+        >
+          <h2 className="text-sm font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+            Todos los nodos
+          </h2>
+          <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
+            {nodos.length} nodos · Auto-refresh 30s
+          </span>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full text-sm min-w-[640px]">
-            <thead className="bg-gray-50 text-gray-500 text-xs uppercase">
-              <tr>
-                <th className="text-left px-5 py-2.5">Nodo</th>
-                <th className="text-left px-3 py-2.5">Rol</th>
-                <th className="text-right px-3 py-2.5">h10 %</th>
-                <th className="text-right px-3 py-2.5">t20 °C</th>
-                <th className="text-right px-3 py-2.5">Batería</th>
-                <th className="text-center px-3 py-2.5">Score</th>
-                <th className="text-center px-3 py-2.5">Status</th>
+          <table className="w-full text-sm min-w-[700px]">
+            <thead>
+              <tr style={{ borderBottom: '1px solid var(--color-border)' }}>
+                {['Nodo', 'Rol', 'h10 %', 't20 °C', 'EC dS/m', 'Batería', 'Score', 'Status'].map((h, i) => (
+                  <th
+                    key={h}
+                    className={`px-5 py-3 text-[11px] font-semibold uppercase tracking-wider ${
+                      ['h10 %', 't20 °C', 'EC dS/m', 'Batería'].includes(h) ? 'text-right' : i > 5 ? 'text-center' : 'text-left'
+                    }`}
+                    style={{ color: 'var(--color-text-muted)', background: 'var(--color-surface-3)' }}
+                  >
+                    {h}
+                  </th>
+                ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
-              {nodos.map(n => (
+            <tbody>
+              {nodos.map((n, idx) => (
                 <tr
                   key={n.nodo_id}
-                  className="hover:bg-gray-50 cursor-pointer transition-colors"
+                  className="cursor-pointer transition-colors duration-150"
                   onClick={() => navigate(`/nodo/${n.nodo_id}`)}
+                  style={{ borderBottom: '1px solid var(--color-border)' }}
+                  onMouseEnter={e => e.currentTarget.style.background = 'var(--color-surface-3)'}
+                  onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                 >
-                  <td className="px-5 py-3 font-medium text-gray-900">{n.nombre}</td>
-                  <td className="px-3 py-3">
-                    <span className={`text-xs px-2 py-0.5 rounded-full ${n.rol === 'tratamiento' ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
+                  <td className="px-5 py-3.5">
+                    <div className="flex items-center gap-3">
+                      <div
+                        className="w-2.5 h-2.5 rounded-full shrink-0"
+                        style={{
+                          background: scoreColor(n.score_phytophthora),
+                          boxShadow: scoreGlow(n.score_phytophthora),
+                        }}
+                      />
+                      <span className="font-medium" style={{ color: 'var(--color-text-primary)' }}>
+                        {n.nombre}
+                      </span>
+                    </div>
+                  </td>
+                  <td className="px-5 py-3.5">
+                    <span
+                      className="text-[11px] px-2.5 py-1 rounded-md font-medium"
+                      style={{
+                        background: n.rol === 'tratamiento' ? 'var(--color-accent-green-dim)' : 'var(--color-surface-4)',
+                        color: n.rol === 'tratamiento' ? 'var(--color-accent-green)' : 'var(--color-text-muted)',
+                        border: `1px solid ${n.rol === 'tratamiento' ? 'rgba(16,185,129,0.2)' : 'var(--color-border)'}`,
+                      }}
+                    >
                       {n.rol}
                     </span>
                   </td>
-                  <td className="px-3 py-3 text-right font-mono">{n.ultima_lectura?.h10_avg?.toFixed(1)}</td>
-                  <td className="px-3 py-3 text-right font-mono">{n.ultima_lectura?.t20?.toFixed(1)}</td>
-                  <td className="px-3 py-3 text-right font-mono">{n.ultima_lectura?.bateria?.toFixed(2)}V</td>
-                  <td className="px-3 py-3 text-center">
+                  <td className="px-5 py-3.5 text-right font-mono text-[13px]" style={{ color: 'var(--color-accent-cyan)' }}>
+                    {n.ultima_lectura?.h10_avg?.toFixed(1)}
+                  </td>
+                  <td className="px-5 py-3.5 text-right font-mono text-[13px]" style={{ color: 'var(--color-accent-amber)' }}>
+                    {n.ultima_lectura?.t20?.toFixed(1)}
+                  </td>
+                  <td className="px-5 py-3.5 text-right font-mono text-[13px]" style={{ color: 'var(--color-text-secondary)' }}>
+                    {n.ultima_lectura?.ec30?.toFixed(2) ?? '—'}
+                  </td>
+                  <td className="px-5 py-3.5 text-right">
+                    <span className="font-mono text-[13px]" style={{
+                      color: n.ultima_lectura?.bateria < 3.3 ? 'var(--color-accent-red)' : 'var(--color-accent-green)'
+                    }}>
+                      {n.ultima_lectura?.bateria?.toFixed(2)}V
+                    </span>
+                  </td>
+                  <td className="px-5 py-3.5 text-center">
                     <ScoreBadge score={n.score_phytophthora} nivel={n.nivel} />
                   </td>
-                  <td className="px-3 py-3 text-center">
-                    <span className={`w-2.5 h-2.5 rounded-full inline-block ${n.online ? 'bg-green-500' : 'bg-red-500'}`} />
+                  <td className="px-5 py-3.5 text-center">
+                    <div className="flex items-center justify-center">
+                      {n.online ? (
+                        <Wifi size={14} style={{ color: 'var(--color-accent-green)' }} />
+                      ) : (
+                        <WifiOff size={14} style={{ color: 'var(--color-accent-red)' }} />
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}

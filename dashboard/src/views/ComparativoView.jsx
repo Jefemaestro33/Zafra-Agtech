@@ -1,26 +1,56 @@
 import { useState } from 'react'
 import { useApi } from '../hooks/useApi'
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, ReferenceLine, Area, ComposedChart } from 'recharts'
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, ReferenceLine, ComposedChart } from 'recharts'
+import { AlertTriangle, CheckCircle } from 'lucide-react'
 import Loading from '../components/Loading'
+
+function CustomTooltip({ active, payload, label }) {
+  if (!active || !payload?.length) return null
+  return (
+    <div
+      className="rounded-xl px-4 py-3 text-xs shadow-2xl"
+      style={{ background: 'var(--color-surface-3)', border: '1px solid var(--color-border-light)' }}
+    >
+      <p className="font-semibold mb-1.5" style={{ color: 'var(--color-text-primary)' }}>{label}</p>
+      {payload.map((p, i) => (
+        <div key={i} className="flex items-center gap-2 py-0.5">
+          <div className="w-2 h-2 rounded-full" style={{ background: p.color }} />
+          <span style={{ color: 'var(--color-text-muted)' }}>{p.name}:</span>
+          <span className="font-mono font-semibold" style={{ color: p.color }}>
+            {typeof p.value === 'number' ? p.value.toFixed(2) : p.value}
+          </span>
+        </div>
+      ))}
+    </div>
+  )
+}
 
 export default function ComparativoView({ predioId }) {
   const [dias, setDias] = useState(30)
   const { data, loading } = useApi(`/api/predios/${predioId}/comparativo?dias=${dias}`, [dias])
 
   if (loading) return <Loading />
-  if (!data || data.length === 0) return <p className="text-gray-400">Sin datos comparativos.</p>
+  if (!data || data.length === 0) {
+    return <p style={{ color: 'var(--color-text-muted)' }}>Sin datos comparativos.</p>
+  }
+
+  const gridColor = 'rgba(42, 47, 64, 0.6)'
+  const axisStyle = { fontSize: 11, fill: 'var(--color-text-muted)' }
 
   return (
     <div className="space-y-6">
       {/* Period selector */}
-      <div className="flex gap-2">
+      <div className="flex gap-2 animate-in">
         {[7, 14, 30, 90, 180].map(d => (
           <button
             key={d}
             onClick={() => setDias(d)}
-            className={`px-4 py-1.5 text-sm rounded-lg border transition-colors ${
-              dias === d ? 'bg-green-600 text-white border-green-600' : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'
-            }`}
+            className="px-4 py-1.5 text-sm rounded-lg transition-all duration-200"
+            style={{
+              background: dias === d ? 'var(--color-accent-green-dim)' : 'var(--color-surface-3)',
+              color: dias === d ? 'var(--color-accent-green)' : 'var(--color-text-muted)',
+              border: `1px solid ${dias === d ? 'rgba(16,185,129,0.3)' : 'var(--color-border)'}`,
+            }}
           >
             {d}d
           </button>
@@ -41,7 +71,6 @@ export default function ComparativoView({ predioId }) {
         const cs = bloque.cusum
         const hasDivergencia = cs?.estado === 'divergencia'
 
-        // CUSUM chart data
         const cusumData = cs?.s_pos?.map((sp, i) => ({
           dia: chartData[i]?.dia || `${i}`,
           s_pos: sp,
@@ -51,70 +80,110 @@ export default function ComparativoView({ predioId }) {
         return (
           <div key={bloque.bloque} className="space-y-4">
             {/* h10 chart */}
-            <div className="bg-white rounded-xl border border-gray-200 p-5">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-3">
-                  <h3 className="text-sm font-semibold text-gray-700">Bloque {bloque.bloque} — h10 promedio diario</h3>
-                  {cs && (
-                    <span className={`text-xs px-2.5 py-1 rounded-full font-semibold ${
-                      hasDivergencia
-                        ? 'bg-red-50 text-red-700 border border-red-200'
-                        : 'bg-green-50 text-green-700 border border-green-200'
-                    }`}>
-                      {hasDivergencia
-                        ? `Divergencia desde ${cs.desde_dia} (${cs.tipo})`
-                        : 'Normal'}
-                    </span>
-                  )}
+            <div
+              className="rounded-2xl overflow-hidden animate-in stagger-2"
+              style={{ background: 'var(--color-surface-2)', border: '1px solid var(--color-border)' }}
+            >
+              <div className="px-5 pt-5 pb-2">
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <div className="flex items-center gap-3">
+                    <h3 className="text-sm font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+                      Bloque {bloque.bloque} — h10 promedio diario
+                    </h3>
+                    {cs && (
+                      <span
+                        className="text-xs px-2.5 py-1 rounded-full font-semibold flex items-center gap-1.5"
+                        style={{
+                          background: hasDivergencia ? 'var(--color-glow-red)' : 'var(--color-glow-green)',
+                          color: hasDivergencia ? 'var(--color-accent-red)' : 'var(--color-accent-green)',
+                          border: `1px solid ${hasDivergencia ? 'rgba(239,68,68,0.3)' : 'rgba(16,185,129,0.3)'}`,
+                        }}
+                      >
+                        {hasDivergencia ? <AlertTriangle size={12} /> : <CheckCircle size={12} />}
+                        {hasDivergencia
+                          ? `Divergencia desde ${cs.desde_dia} (${cs.tipo})`
+                          : 'Normal'}
+                      </span>
+                    )}
+                  </div>
+                  <span
+                    className="text-xs px-2.5 py-1 rounded-full font-semibold"
+                    style={{
+                      background: avgDelta < 0 ? 'var(--color-glow-green)' : 'var(--color-glow-amber)',
+                      color: avgDelta < 0 ? 'var(--color-accent-green)' : 'var(--color-accent-amber)',
+                      border: `1px solid ${avgDelta < 0 ? 'rgba(16,185,129,0.3)' : 'rgba(245,158,11,0.3)'}`,
+                    }}
+                  >
+                    Δ promedio: {avgDelta.toFixed(2)}%
+                  </span>
                 </div>
-                <span className={`text-xs px-2 py-1 rounded-full font-semibold ${avgDelta < 0 ? 'bg-green-50 text-green-700' : 'bg-orange-50 text-orange-700'}`}>
-                  Δ promedio: {avgDelta.toFixed(2)}%
-                </span>
               </div>
-              <ResponsiveContainer width="100%" height={280}>
-                <LineChart data={chartData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                  <XAxis dataKey="dia" tick={{ fontSize: 11 }} />
-                  <YAxis unit="%" tick={{ fontSize: 11 }} domain={[15, 50]} />
-                  <Tooltip />
-                  <Legend />
-                  <Line type="monotone" dataKey="tratamiento" name="Tratamiento" stroke="#22c55e" strokeWidth={2} dot={false} />
-                  <Line type="monotone" dataKey="testigo" name="Testigo" stroke="#6b7280" strokeWidth={2} dot={false} strokeDasharray="5 5" />
-                </LineChart>
-              </ResponsiveContainer>
+              <div className="px-3 pb-4">
+                <ResponsiveContainer width="100%" height={280}>
+                  <LineChart data={chartData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
+                    <XAxis dataKey="dia" tick={axisStyle} />
+                    <YAxis unit="%" tick={axisStyle} domain={[15, 50]} />
+                    <Tooltip content={<CustomTooltip />} />
+                    <Legend wrapperStyle={{ fontSize: 12, color: 'var(--color-text-muted)' }} />
+                    <Line type="monotone" dataKey="tratamiento" name="Tratamiento" stroke="#10b981" strokeWidth={2.5} dot={false} />
+                    <Line type="monotone" dataKey="testigo" name="Testigo" stroke="#6b7280" strokeWidth={1.5} dot={false} strokeDasharray="6 4" />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
             </div>
 
             {/* CUSUM chart */}
             {cusumData.length > 0 && cs.umbral_h > 0 && (
-              <div className="bg-white rounded-xl border border-gray-200 p-5">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-sm font-semibold text-gray-700">
-                    CUSUM — Bloque {bloque.bloque}
-                    <span className="text-xs text-gray-400 ml-2 font-normal">
-                      (umbral h = {cs.umbral_h.toFixed(2)}, baseline μ = {cs.alarmas?.[0] ? `${deltas.slice(0,28).reduce((a,b)=>a+b,0)/28 || 0:.2f}` : '—'})
-                    </span>
-                  </h3>
-                  {cs.total_alarmas > 0 && (
-                    <span className="text-xs text-red-600 font-semibold">
-                      {cs.total_alarmas} alarma{cs.total_alarmas > 1 ? 's' : ''}
-                    </span>
-                  )}
+              <div
+                className="rounded-2xl overflow-hidden animate-in stagger-3"
+                style={{ background: 'var(--color-surface-2)', border: '1px solid var(--color-border)' }}
+              >
+                <div className="px-5 pt-5 pb-2">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-sm font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+                        CUSUM — Bloque {bloque.bloque}
+                      </h3>
+                      <p className="text-[11px] mt-0.5" style={{ color: 'var(--color-text-muted)' }}>
+                        Umbral h = {cs.umbral_h.toFixed(2)} · Cuando S+ o S- cruza el umbral, divergencia sostenida
+                      </p>
+                    </div>
+                    {cs.total_alarmas > 0 && (
+                      <span
+                        className="text-xs font-semibold flex items-center gap-1.5 px-2.5 py-1 rounded-full"
+                        style={{
+                          background: 'var(--color-glow-red)',
+                          color: 'var(--color-accent-red)',
+                          border: '1px solid rgba(239,68,68,0.3)',
+                        }}
+                      >
+                        <AlertTriangle size={12} />
+                        {cs.total_alarmas} alarma{cs.total_alarmas > 1 ? 's' : ''}
+                      </span>
+                    )}
+                  </div>
                 </div>
-                <ResponsiveContainer width="100%" height={200}>
-                  <ComposedChart data={cusumData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                    <XAxis dataKey="dia" tick={{ fontSize: 10 }} interval={Math.max(0, Math.floor(cusumData.length / 8))} />
-                    <YAxis tick={{ fontSize: 11 }} />
-                    <Tooltip />
-                    <Legend />
-                    <ReferenceLine y={cs.umbral_h} stroke="#9ca3af" strokeDasharray="8 4" label={{ value: `h = ${cs.umbral_h.toFixed(1)}`, position: 'right', fontSize: 10, fill: '#9ca3af' }} />
-                    <Line type="monotone" dataKey="s_pos" name="S+ (incremento)" stroke="#ef4444" strokeWidth={2} dot={false} />
-                    <Line type="monotone" dataKey="s_neg" name="S- (decremento)" stroke="#3b82f6" strokeWidth={2} dot={false} />
-                  </ComposedChart>
-                </ResponsiveContainer>
-                <p className="text-xs text-gray-400 mt-2">
-                  Cuando S+ o S- cruza la línea punteada (umbral h), se detecta divergencia sostenida entre tratamiento y testigo.
-                </p>
+                <div className="px-3 pb-4">
+                  <ResponsiveContainer width="100%" height={200}>
+                    <ComposedChart data={cusumData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
+                      <XAxis dataKey="dia" tick={{ fontSize: 10, fill: 'var(--color-text-muted)' }} interval={Math.max(0, Math.floor(cusumData.length / 8))} />
+                      <YAxis tick={axisStyle} />
+                      <Tooltip content={<CustomTooltip />} />
+                      <Legend wrapperStyle={{ fontSize: 12, color: 'var(--color-text-muted)' }} />
+                      <ReferenceLine
+                        y={cs.umbral_h}
+                        stroke="var(--color-text-muted)"
+                        strokeDasharray="8 4"
+                        strokeOpacity={0.5}
+                        label={{ value: `h = ${cs.umbral_h.toFixed(1)}`, position: 'right', fontSize: 10, fill: 'var(--color-text-muted)' }}
+                      />
+                      <Line type="monotone" dataKey="s_pos" name="S+ (incremento)" stroke="#ef4444" strokeWidth={2} dot={false} />
+                      <Line type="monotone" dataKey="s_neg" name="S- (decremento)" stroke="#3b82f6" strokeWidth={2} dot={false} />
+                    </ComposedChart>
+                  </ResponsiveContainer>
+                </div>
               </div>
             )}
           </div>

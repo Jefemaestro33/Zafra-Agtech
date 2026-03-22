@@ -1,17 +1,144 @@
 @import "tailwindcss";
 @import "leaflet/dist/leaflet.css";
 
-body {
-  margin: 0;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-  background-color: #f9fafb;
+@theme {
+  --color-surface-0: #0a0c10;
+  --color-surface-1: #0f1117;
+  --color-surface-2: #161922;
+  --color-surface-3: #1e2231;
+  --color-surface-4: #262b3a;
+  --color-border: #2a2f40;
+  --color-border-light: #353b50;
+  --color-text-primary: #f0f2f5;
+  --color-text-secondary: #9ca3b4;
+  --color-text-muted: #5c6378;
+  --color-accent-green: #10b981;
+  --color-accent-green-dim: #065f46;
+  --color-accent-emerald: #34d399;
+  --color-accent-amber: #f59e0b;
+  --color-accent-amber-dim: #78350f;
+  --color-accent-red: #ef4444;
+  --color-accent-red-dim: #7f1d1d;
+  --color-accent-cyan: #22d3ee;
+  --color-accent-cyan-dim: #164e63;
+  --color-accent-blue: #3b82f6;
+  --color-accent-blue-dim: #1e3a5f;
+  --color-accent-violet: #8b5cf6;
+  --color-glow-green: rgba(16, 185, 129, 0.12);
+  --color-glow-red: rgba(239, 68, 68, 0.12);
+  --color-glow-amber: rgba(245, 158, 11, 0.12);
+  --color-glow-cyan: rgba(34, 211, 238, 0.10);
 }
 
-/* Hide scrollbar on nav tabs (mobile) */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-surface-4) transparent;
+}
+
+body {
+  margin: 0;
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  background-color: var(--color-surface-0);
+  color: var(--color-text-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.font-mono {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+}
+
 .scrollbar-none {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
 .scrollbar-none::-webkit-scrollbar {
   display: none;
+}
+
+/* Glow card hover effect */
+.card-glow {
+  position: relative;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.card-glow:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
+}
+
+/* Staggered fade-in animation */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.animate-in {
+  animation: fadeInUp 0.4s ease-out both;
+}
+.stagger-1 { animation-delay: 0.05s; }
+.stagger-2 { animation-delay: 0.1s; }
+.stagger-3 { animation-delay: 0.15s; }
+.stagger-4 { animation-delay: 0.2s; }
+.stagger-5 { animation-delay: 0.25s; }
+.stagger-6 { animation-delay: 0.3s; }
+
+/* Pulse glow for critical alerts */
+@keyframes pulseGlow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.3); }
+  50% { box-shadow: 0 0 16px 4px rgba(239, 68, 68, 0.15); }
+}
+.pulse-critical {
+  animation: pulseGlow 2.5s ease-in-out infinite;
+}
+
+/* Leaflet dark map overrides */
+.leaflet-container {
+  background: var(--color-surface-2) !important;
+}
+.leaflet-popup-content-wrapper {
+  background: var(--color-surface-3) !important;
+  color: var(--color-text-primary) !important;
+  border: 1px solid var(--color-border) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4) !important;
+}
+.leaflet-popup-tip {
+  background: var(--color-surface-3) !important;
+}
+.leaflet-popup-close-button {
+  color: var(--color-text-secondary) !important;
+}
+.leaflet-control-zoom a {
+  background: var(--color-surface-3) !important;
+  color: var(--color-text-primary) !important;
+  border-color: var(--color-border) !important;
+}
+
+/* Recharts tooltip dark override */
+.recharts-default-tooltip {
+  background: var(--color-surface-3) !important;
+  border: 1px solid var(--color-border) !important;
+  border-radius: 8px !important;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4) !important;
+}
+.recharts-tooltip-label {
+  color: var(--color-text-primary) !important;
+  font-weight: 600 !important;
+}
+.recharts-tooltip-item {
+  color: var(--color-text-secondary) !important;
+}
+
+/* Chart grid lines */
+.recharts-cartesian-grid line {
+  stroke: var(--color-border) !important;
+  stroke-opacity: 0.4 !important;
+}
+.recharts-text {
+  fill: var(--color-text-muted) !important;
 }
