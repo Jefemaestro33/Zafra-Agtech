@@ -41,7 +41,7 @@ log = logging.getLogger("llm")
 
 DATABASE_URL = os.environ.get("DATABASE_URL", "")
 ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
-MODEL = "claude-sonnet-4-5-20250514"
+MODEL = "claude-sonnet-4-5"
 PROMPTS_DIR = Path(__file__).parent / "prompts"
 
 
@@ -141,6 +141,29 @@ def convertir_resumen_a_texto(resumen):
 # ============================================================
 # 3. CONSULTAR LLM
 # ============================================================
+def _call_anthropic_api(system_prompt, messages, max_tokens=800):
+    """Llama a la API de Anthropic directamente con httpx (más confiable que el SDK)."""
+    import httpx
+    response = httpx.post(
+        "https://api.anthropic.com/v1/messages",
+        headers={
+            "Content-Type": "application/json",
+            "x-api-key": ANTHROPIC_API_KEY,
+            "anthropic-version": "2023-06-01",
+        },
+        json={
+            "model": MODEL,
+            "max_tokens": max_tokens,
+            "system": system_prompt,
+            "messages": messages,
+        },
+        timeout=60.0,
+    )
+    response.raise_for_status()
+    data = response.json()
+    return data["content"][0]["text"]
+
+
 def consultar_llm(texto_resumen, tipo_prompt="phytophthora"):
     """
     Envía resumen a Claude API. Retry 3x con backoff.
@@ -150,19 +173,14 @@ def consultar_llm(texto_resumen, tipo_prompt="phytophthora"):
         log.warning("ANTHROPIC_API_KEY no configurada, retornando fallback")
         return f"⚠️ DIAGNÓSTICO IA NO DISPONIBLE (API key no configurada)\n\n{texto_resumen}"
 
-    import anthropic
-    client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
     system_prompt = cargar_prompt(tipo_prompt)
 
     for intento in range(3):
         try:
-            response = client.messages.create(
-                model=MODEL,
-                max_tokens=800,
-                system=system_prompt,
-                messages=[{"role": "user", "content": texto_resumen}],
+            return _call_anthropic_api(
+                system_prompt,
+                [{"role": "user", "content": texto_resumen}],
             )
-            return response.content[0].text
         except Exception as e:
             log.warning(f"LLM intento {intento + 1} falló: {e}")
             if intento < 2:
@@ -180,39 +198,30 @@ def consultar_llm_visual(imagen_base64, texto_resumen, tipo_prompt="diagnostico_
     if not ANTHROPIC_API_KEY:
         return f"⚠️ DIAGNÓSTICO VISUAL NO DISPONIBLE (API key no configurada)\n\n{texto_resumen}"
 
-    import anthropic
-    client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
     system_prompt = cargar_prompt(tipo_prompt)
 
-    # Detectar media type
     media_type = "image/jpeg"
-    if imagen_base64.startswith("/9j/"):
-        media_type = "image/jpeg"
-    elif imagen_base64.startswith("iVBOR"):
+    if imagen_base64.startswith("iVBOR"):
         media_type = "image/png"
+
+    messages = [{
+        "role": "user",
+        "content": [
+            {
+                "type": "image",
+                "source": {
+                    "type": "base64",
+                    "media_type": media_type,
+                    "data": imagen_base64,
+                },
+            },
+            {"type": "text", "text": texto_resumen},
+        ],
+    }]
 
     for intento in range(3):
         try:
-            response = client.messages.create(
-                model=MODEL,
-                max_tokens=800,
-                system=system_prompt,
-                messages=[{
-                    "role": "user",
-                    "content": [
-                        {
-                            "type": "image",
-                            "source": {
-                                "type": "base64",
-                                "media_type": media_type,
-                                "data": imagen_base64,
-                            },
-                        },
-                        {"type": "text", "text": texto_resumen},
-                    ],
-                }],
-            )
-            return response.content[0].text
+            return _call_anthropic_api(system_prompt, messages)
         except Exception as e:
             log.warning(f"LLM visual intento {intento + 1} falló: {e}")
             if intento < 2:
@@ -228,18 +237,21 @@ def parsear_diagnostico(respuesta_llm):
     """Parsea secciones del diagnóstico. Retorna dict."""
     result = {}
 
+    # Support both "DIAGNÓSTICO:" and "## DIAGNÓSTICO:" (markdown) formats
+    # The (?:#+ *)? prefix handles optional markdown headers
+    H = r"(?:#+ *)?"  # optional markdown header prefix
     patterns = [
-        ("diagnostico", r"DIAGN[ÓO]STICO(?:\s*INTEGRADO)?:\s*(.+?)(?=\n(?:RECOMENDACI|S[ÍI]NTOMAS|DATOS DE SUELO|CONDICIONES|VENTANA|$))"),
-        ("sintomas", r"S[ÍI]NTOMAS OBSERVADOS:\s*(.+?)(?=\n(?:DATOS|DIAGN|$))"),
-        ("datos_suelo", r"DATOS DE SUELO:\s*(.+?)(?=\n(?:DIAGN|RECOMEND|$))"),
-        ("recomendacion_1", r"RECOMENDACI[ÓO]N 1:\s*(.+?)(?=\n(?:RECOMENDACI|REFERENCIA|$))"),
-        ("recomendacion_2", r"RECOMENDACI[ÓO]N 2:\s*(.+?)(?=\n(?:REFERENCIA|$))"),
-        ("recomendacion", r"RECOMENDACI[ÓO]N:\s*(.+?)(?=\n(?:REFERENCIA|$))"),
-        ("referencia", r"REFERENCIA:\s*(.+?)$"),
-        ("condiciones", r"CONDICIONES ACTUALES:\s*(.+?)(?=\n(?:VENTANA|DOSIS|$))"),
-        ("ventana", r"VENTANA [ÓO]PTIMA:\s*(.+?)(?=\n(?:DOSIS|REFERENCIA|$))"),
-        ("dosis", r"DOSIS RECOMENDADA:\s*(.+?)(?=\n(?:REFERENCIA|$))"),
-        ("estado_general", r"ESTADO GENERAL:\s*(.+?)(?=\n(?:POR BLOQUE|ALERTAS|$))"),
+        ("diagnostico", H + r"DIAGN[ÓO]STICO(?:\s*INTEGRADO)?:?\s*\n(.+?)(?=\n(?:#|RECOMENDACI|S[ÍI]NTOMAS|DATOS DE SUELO|CONDICIONES|VENTANA)|$)"),
+        ("sintomas", H + r"S[ÍI]NTOMAS OBSERVADOS:?\s*\n(.+?)(?=\n(?:#|DATOS|DIAGN)|$)"),
+        ("datos_suelo", H + r"DATOS DE SUELO:?\s*\n(.+?)(?=\n(?:#|DIAGN|RECOMEND)|$)"),
+        ("recomendacion_1", H + r"RECOMENDACI[ÓO]N 1:?\s*\n(.+?)(?=\n(?:#|RECOMENDACI[ÓO]N 2|REFERENCIA)|$)"),
+        ("recomendacion_2", H + r"RECOMENDACI[ÓO]N 2:?\s*\n(.+?)(?=\n(?:#|REFERENCIA)|$)"),
+        ("recomendacion", H + r"RECOMENDACI[ÓO]N:?\s*\n(.+?)(?=\n(?:#|REFERENCIA)|$)"),
+        ("referencia", H + r"REFERENCIA:?\s*\n(.+?)$"),
+        ("condiciones", H + r"CONDICIONES ACTUALES:?\s*\n(.+?)(?=\n(?:#|VENTANA|DOSIS)|$)"),
+        ("ventana", H + r"VENTANA [ÓO]PTIMA:?\s*\n(.+?)(?=\n(?:#|DOSIS|REFERENCIA)|$)"),
+        ("dosis", H + r"DOSIS RECOMENDADA:?\s*\n(.+?)(?=\n(?:#|REFERENCIA)|$)"),
+        ("estado_general", H + r"ESTADO GENERAL:?\s*\n(.+?)(?=\n(?:#|POR BLOQUE|ALERTAS)|$)"),
     ]
 
     for key, pattern in patterns:
