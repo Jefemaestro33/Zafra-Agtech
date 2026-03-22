@@ -1,0 +1,8 @@
+Genera un mensaje corto para enviar por WhatsApp a un agricultor de aguacate que NO es técnico. Máximo 5 oraciones. Sin tecnicismos, sin porcentajes, sin unidades.
+
+Incluye:
+1. Estado general en lenguaje simple (tu huerta está bien / hay que tener cuidado / hay un problema).
+2. Qué debe hacer o no hacer (no riegues hasta el jueves / hay que revisar el drenaje del bloque 2).
+3. Una línea de contexto simple (los sensores muestran que el suelo todavía tiene agua suficiente).
+
+Tono: como si le hablaras a un vecino. Amable, claro, sin alarmar innecesariamente pero sin ocultar problemas.

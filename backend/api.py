@@ -36,6 +36,14 @@ from alertas import (
     get_todos_nodos,
     get_tiempo_max_global,
 )
+from llm_consultor import (
+    diagnosticar_evento,
+    generar_reporte_semanal,
+    generar_reporte_agricultor,
+    convertir_resumen_a_texto,
+    consultar_llm_visual,
+    parsear_diagnostico,
+)
 
 # ============================================================
 # APP
@@ -119,6 +127,11 @@ class MicrobiomaCreate(BaseModel):
     valor: float
     unidad: str
     notas: Optional[str] = None
+
+
+class DiagnosticoVisualRequest(BaseModel):
+    imagen_base64: str
+    nodo_id: int
 
 
 # ============================================================
@@ -603,6 +616,44 @@ def crear_microbioma(m: MicrobiomaCreate):
             "h10": h10, "h20": h20, "h30": h30, "t20": t20, "ec30": ec30,
         },
     }
+
+
+# ============================================================
+# LLM DIAGNÓSTICOS
+# ============================================================
+@app.post("/api/alertas/{evento_id}/diagnostico")
+def diagnosticar_evento_endpoint(evento_id: int):
+    with get_conn() as conn:
+        diagnostico = diagnosticar_evento(conn, evento_id)
+    if "error" in diagnostico:
+        raise HTTPException(404, diagnostico["error"])
+    return {"diagnostico": diagnostico, "evento_id": evento_id}
+
+
+@app.post("/api/reportes/semanal")
+def reporte_semanal_endpoint(predio_id: int = Query(1)):
+    with get_conn() as conn:
+        reporte = generar_reporte_semanal(conn, predio_id)
+    return {"reporte": reporte}
+
+
+@app.post("/api/reportes/agricultor")
+def reporte_agricultor_endpoint(predio_id: int = Query(1)):
+    with get_conn() as conn:
+        reporte = generar_reporte_agricultor(conn, predio_id)
+    return {"reporte": reporte}
+
+
+@app.post("/api/diagnostico/visual")
+def diagnostico_visual_endpoint(req: DiagnosticoVisualRequest):
+    with get_conn() as conn:
+        resumen = generar_resumen_nodo(conn, req.nodo_id)
+    if "error" in resumen:
+        raise HTTPException(404, resumen["error"])
+    texto = convertir_resumen_a_texto(resumen)
+    respuesta = consultar_llm_visual(req.imagen_base64, texto)
+    diagnostico = parsear_diagnostico(respuesta)
+    return {"diagnostico": diagnostico, "nodo_id": req.nodo_id}
 
 
 # ============================================================
