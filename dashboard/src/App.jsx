@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Routes, Route, NavLink, useNavigate, useLocation } from 'react-router-dom'
 import { useApi } from './hooks/useApi'
 import {
@@ -13,6 +13,8 @@ import {
   Leaf,
   Menu,
   X,
+  PanelLeftClose,
+  PanelLeftOpen,
 } from 'lucide-react'
 import OverviewView from './views/OverviewView'
 import NodoView from './views/NodoView'
@@ -37,111 +39,14 @@ export default function App() {
   const navigate = useNavigate()
   const location = useLocation()
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [collapsed, setCollapsed] = useState(false)
 
   const predio = predios?.find(p => p.predio_id === predioId) || predios?.[0]
   const alertCount = alertas?.length || 0
   const hasAlerts = alertCount > 0
 
-  const sidebarContent = (
-    <>
-      {/* Predio selector */}
-      <div className="px-4 pt-5 pb-3">
-        <p className="text-[10px] font-semibold uppercase tracking-widest mb-2" style={{ color: 'var(--color-text-muted)' }}>
-          Predio
-        </p>
-        <div
-          className="relative flex items-center rounded-xl"
-          style={{ background: 'var(--color-surface-3)', border: '1px solid var(--color-border)' }}
-        >
-          <select
-            value={predioId}
-            onChange={e => setPredioId(Number(e.target.value))}
-            className="w-full appearance-none bg-transparent px-3 py-2.5 pr-8 text-sm font-medium outline-none cursor-pointer"
-            style={{ color: 'var(--color-text-primary)' }}
-          >
-            {predios?.map(p => (
-              <option key={p.predio_id} value={p.predio_id} style={{ background: '#1e2231', color: '#f0f2f5' }}>
-                {p.nombre}
-              </option>
-            ))}
-          </select>
-          <ChevronDown size={14} className="absolute right-3 pointer-events-none" style={{ color: 'var(--color-text-muted)' }} />
-        </div>
-      </div>
-
-      {/* Context info */}
-      {predio && (
-        <div className="px-4 pb-4">
-          <div
-            className="rounded-xl px-3 py-3 space-y-1.5"
-            style={{ background: 'var(--color-surface-3)', border: '1px solid var(--color-border)' }}
-          >
-            <span
-              className="inline-block px-2 py-0.5 rounded-md text-[10px] font-semibold uppercase tracking-wide"
-              style={{ background: 'var(--color-accent-green-dim)', color: 'var(--color-accent-green)' }}
-            >
-              {predio.cultivo || 'Aguacate Hass'}
-            </span>
-            <div className="space-y-0.5">
-              {[
-                predio.tipo_suelo || 'Andisol volcánico',
-                `${predio.hectareas || 4} hectáreas`,
-                predio.municipio || 'Nextipac, Jalisco',
-              ].map((item, i) => (
-                <p key={i} className="text-[11px]" style={{ color: 'var(--color-text-muted)' }}>{item}</p>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Divider */}
-      <div className="mx-4 mb-2" style={{ borderBottom: '1px solid var(--color-border)' }} />
-
-      {/* Navigation */}
-      <div className="px-3 pb-4">
-        <p className="text-[10px] font-semibold uppercase tracking-widest mb-2 px-1" style={{ color: 'var(--color-text-muted)' }}>
-          Navegación
-        </p>
-        <nav className="space-y-0.5">
-          {tabs.map(t => {
-            const isActive = t.path === '/'
-              ? location.pathname === '/'
-              : location.pathname.startsWith(t.path)
-            const Icon = t.icon
-            return (
-              <NavLink
-                key={t.path}
-                to={t.path}
-                onClick={() => setMobileOpen(false)}
-                className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200"
-                style={{
-                  background: isActive ? 'var(--color-accent-green-dim)' : 'transparent',
-                  color: isActive ? 'var(--color-accent-green)' : 'var(--color-text-muted)',
-                  border: isActive ? '1px solid rgba(16,185,129,0.2)' : '1px solid transparent',
-                }}
-                onMouseEnter={e => {
-                  if (!isActive) {
-                    e.currentTarget.style.background = 'var(--color-surface-3)'
-                    e.currentTarget.style.color = 'var(--color-text-secondary)'
-                  }
-                }}
-                onMouseLeave={e => {
-                  if (!isActive) {
-                    e.currentTarget.style.background = 'transparent'
-                    e.currentTarget.style.color = 'var(--color-text-muted)'
-                  }
-                }}
-              >
-                <Icon size={18} />
-                <span>{t.label}</span>
-              </NavLink>
-            )
-          })}
-        </nav>
-      </div>
-    </>
-  )
+  // Close mobile drawer on route change
+  useEffect(() => { setMobileOpen(false) }, [location.pathname])
 
   return (
     <div className="min-h-screen flex flex-col" style={{ background: 'var(--color-surface-0)' }}>
@@ -162,6 +67,17 @@ export default function App() {
               onClick={() => setMobileOpen(!mobileOpen)}
             >
               {mobileOpen ? <X size={20} /> : <Menu size={20} />}
+            </button>
+            {/* Desktop sidebar toggle */}
+            <button
+              className="hidden lg:flex p-1.5 rounded-lg transition-colors"
+              style={{ color: 'var(--color-text-muted)' }}
+              onClick={() => setCollapsed(!collapsed)}
+              onMouseEnter={e => e.currentTarget.style.background = 'var(--color-surface-3)'}
+              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+              title={collapsed ? 'Expandir sidebar' : 'Colapsar sidebar'}
+            >
+              {collapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
             </button>
             <div
               className="w-8 h-8 rounded-lg flex items-center justify-center"
@@ -221,13 +137,14 @@ export default function App() {
           />
         )}
 
-        {/* Sidebar */}
+        {/* Sidebar — expanded */}
         <aside
           className={`
             shrink-0 overflow-y-auto scrollbar-none z-40
             fixed lg:static inset-y-0 left-0 top-12
-            transform transition-transform duration-200 ease-out
+            transform transition-all duration-200 ease-out
             ${mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+            ${collapsed ? 'lg:hidden' : ''}
           `}
           style={{
             width: 256,
@@ -235,7 +152,102 @@ export default function App() {
             borderRight: '1px solid var(--color-border)',
           }}
         >
-          {sidebarContent}
+          {/* Predio selector */}
+          <div className="px-4 pt-5 pb-3">
+            <p className="text-[10px] font-semibold uppercase tracking-widest mb-2" style={{ color: 'var(--color-text-muted)' }}>
+              Predio
+            </p>
+            <div
+              className="relative flex items-center rounded-xl"
+              style={{ background: 'var(--color-surface-3)', border: '1px solid var(--color-border)' }}
+            >
+              <select
+                value={predioId}
+                onChange={e => setPredioId(Number(e.target.value))}
+                className="w-full appearance-none bg-transparent px-3 py-2.5 pr-8 text-sm font-medium outline-none cursor-pointer"
+                style={{ color: 'var(--color-text-primary)' }}
+              >
+                {predios?.map(p => (
+                  <option key={p.predio_id} value={p.predio_id} style={{ background: '#1e2231', color: '#f0f2f5' }}>
+                    {p.nombre}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown size={14} className="absolute right-3 pointer-events-none" style={{ color: 'var(--color-text-muted)' }} />
+            </div>
+          </div>
+
+          {/* Context info */}
+          {predio && (
+            <div className="px-4 pb-4">
+              <div
+                className="rounded-xl px-3 py-3 space-y-1.5"
+                style={{ background: 'var(--color-surface-3)', border: '1px solid var(--color-border)' }}
+              >
+                <span
+                  className="inline-block px-2 py-0.5 rounded-md text-[10px] font-semibold uppercase tracking-wide"
+                  style={{ background: 'var(--color-accent-green-dim)', color: 'var(--color-accent-green)' }}
+                >
+                  {predio.cultivo || 'Aguacate Hass'}
+                </span>
+                <div className="space-y-0.5">
+                  {[
+                    predio.tipo_suelo || 'Andisol volcánico',
+                    `${predio.hectareas || 4} hectáreas`,
+                    predio.municipio || 'Nextipac, Jalisco',
+                  ].map((item, i) => (
+                    <p key={i} className="text-[11px]" style={{ color: 'var(--color-text-muted)' }}>{item}</p>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Divider */}
+          <div className="mx-4 mb-2" style={{ borderBottom: '1px solid var(--color-border)' }} />
+
+          {/* Navigation */}
+          <div className="px-3 pb-4">
+            <p className="text-[10px] font-semibold uppercase tracking-widest mb-2 px-1" style={{ color: 'var(--color-text-muted)' }}>
+              Navegación
+            </p>
+            <nav className="space-y-0.5">
+              {tabs.map(t => {
+                const isActive = t.path === '/'
+                  ? location.pathname === '/'
+                  : location.pathname.startsWith(t.path)
+                const Icon = t.icon
+                return (
+                  <NavLink
+                    key={t.path}
+                    to={t.path}
+                    onClick={() => setMobileOpen(false)}
+                    className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200"
+                    style={{
+                      background: isActive ? 'var(--color-accent-green-dim)' : 'transparent',
+                      color: isActive ? 'var(--color-accent-green)' : 'var(--color-text-muted)',
+                      border: isActive ? '1px solid rgba(16,185,129,0.2)' : '1px solid transparent',
+                    }}
+                    onMouseEnter={e => {
+                      if (!isActive) {
+                        e.currentTarget.style.background = 'var(--color-surface-3)'
+                        e.currentTarget.style.color = 'var(--color-text-secondary)'
+                      }
+                    }}
+                    onMouseLeave={e => {
+                      if (!isActive) {
+                        e.currentTarget.style.background = 'transparent'
+                        e.currentTarget.style.color = 'var(--color-text-muted)'
+                      }
+                    }}
+                  >
+                    <Icon size={18} />
+                    <span>{t.label}</span>
+                  </NavLink>
+                )
+              })}
+            </nav>
+          </div>
         </aside>
 
         {/* Main content */}
