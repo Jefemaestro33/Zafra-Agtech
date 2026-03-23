@@ -45,7 +45,7 @@ El sistema resuelve un problema concreto: los productores de aguacate pierden en
 | `comparativo.py` | ~280 | CUSUM tratamiento vs testigo, medias diarias, análisis por bloque | ✓ Producción |
 | `modelo_microbioma.py` | ~350 | Random Forest (14 features → 5 targets), LOO-CV, predicción on-demand | ✓ Producción |
 
-### 2.2 Dashboard React (6 vistas, ~1,200 líneas JSX)
+### 2.2 Dashboard React (6 vistas, 4 componentes, ~2,010 líneas JSX/JS/CSS)
 
 | Vista | Ruta | Contenido |
 |-------|------|-----------|
@@ -57,12 +57,20 @@ El sistema resuelve un problema concreto: los productores de aguacate pierden en
 | Alertas IA | `/alertas` | Botón "Generar diagnóstico IA" → Claude → diagnóstico formateado + "Enviar a Salvador" (clipboard) |
 
 **Características del dashboard:**
+- Dark premium theme con 25+ CSS custom properties (surfaces, accents, glows, borders, text)
+- Tipografía: Plus Jakarta Sans (UI) + JetBrains Mono (datos numéricos) vía Google Fonts
+- Iconografía: Lucide React (reemplazó todos los emojis por íconos SVG)
+- Staggered fade-in animations al cargar vistas
+- Card-glow hover effects en tarjetas KPI
+- Pulse animation en alertas críticas de Phytophthora
+- Custom dark tooltips en todas las gráficas Recharts
+- SVG gradients en area charts con colores semánticos (cyan=humedad, amber=temperatura, verde=tratamiento, gris=testigo)
+- Leaflet dark mode overrides (popups, controles, background)
 - Mapa satelital Esri World Imagery con toggle a OpenStreetMap
 - Auto-refresh silencioso cada 30 segundos
-- Skeleton loaders en primera carga
-- Mobile responsive (tabs scrollables, grids colapsables, tablas con scroll horizontal)
+- Mobile responsive con skeleton loaders dark-themed (tabs scrollables, grids colapsables, tablas con scroll horizontal)
 - Favicon 🌿, Open Graph para preview en WhatsApp
-- Topbar verde de 2 filas (logo + selector de predio + tabs)
+- Topbar dark de 2 filas (logo + selector de predio + tabs)
 
 ### 2.3 Base de datos PostgreSQL (Railway)
 
@@ -187,6 +195,8 @@ ESP32/TTGO ──LoRa──→ Gateway RAK
 | Gráficas | Recharts | 2 |
 | Mapa | react-leaflet + Leaflet | 5 / 1.9 |
 | Tiles | Esri World Imagery + OpenStreetMap | — |
+| Iconos | lucide-react | 0.577 |
+| Fonts | Plus Jakarta Sans + JetBrains Mono | Google Fonts |
 | Firmware | C++ (Arduino / ESP32) | — |
 | Hardware | TTGO T-Beam v1.1 (ESP32 + SX1276) | — |
 | Radio | LoRa 915 MHz | SF7, BW125k |
@@ -394,13 +404,13 @@ Detalle completo en `docs/Presupuesto_Piloto_Nextipac.xlsx`.
 
 | Métrica | Valor |
 |---------|-------|
-| Líneas de código | 6,215 |
+| Líneas de código | 8,316 |
 | Archivos de código | ~30 |
 | Endpoints API | 24 |
 | Tablas PostgreSQL | 8 |
 | Registros en DB | 420,000+ |
-| Commits en GitHub | 11 |
-| Tiempo de desarrollo | 1 día (22 marzo 2026) |
+| Commits en GitHub | 12 |
+| Tiempo de desarrollo | 2 días (22-23 marzo 2026, incluye rediseño UI dark theme) |
 | Costo de desarrollo | $0 (herramientas gratuitas + Claude Code) |
 | Costo operativo mensual | ~$11 USD |
 
