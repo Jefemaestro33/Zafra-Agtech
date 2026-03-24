@@ -15,6 +15,9 @@ import {
   ChevronsLeft,
   ChevronsRight,
   Info,
+  Star,
+  Trash2,
+  MessageCircleQuestion,
 } from 'lucide-react'
 import OverviewView from './views/OverviewView'
 import NodoView from './views/NodoView'
@@ -23,6 +26,7 @@ import ComparativoView from './views/ComparativoView'
 import ClimaView from './views/ClimaView'
 import AlertasView from './views/AlertasView'
 import PredioView from './views/PredioView'
+import ConsultorView from './views/ConsultorView'
 
 const tabs = [
   { path: '/predio', label: 'Predio', icon: Info },
@@ -31,7 +35,17 @@ const tabs = [
   { path: '/firma', label: 'Firma hídrica', icon: Droplets },
   { path: '/comparativo', label: 'Comparativo', icon: GitCompareArrows },
   { path: '/clima', label: 'Clima', icon: CloudSun },
-  { path: '/alertas', label: 'Alertas IA', icon: BrainCircuit },
+  {
+    path: '/alertas',
+    label: 'Alertas IA',
+    icon: Bell,
+    sub: [
+      { path: '/alertas', label: 'Todas', icon: Bell },
+      { path: '/alertas/destacadas', label: 'Destacadas', icon: Star },
+      { path: '/alertas/borradas', label: 'Borradas', icon: Trash2 },
+    ],
+  },
+  { path: '/consultor', label: 'Consultor IA', icon: MessageCircleQuestion },
 ]
 
 export default function App() {
@@ -42,21 +56,32 @@ export default function App() {
   const location = useLocation()
   const [mobileOpen, setMobileOpen] = useState(false)
   const [collapsed, setCollapsed] = useState(false)
+  const [alertasOpen, setAlertasOpen] = useState(false)
 
   const alertCount = alertas?.length || 0
   const hasAlerts = alertCount > 0
 
   useEffect(() => { setMobileOpen(false) }, [location.pathname])
+  useEffect(() => {
+    if (location.pathname.startsWith('/alertas')) setAlertasOpen(true)
+  }, [location.pathname])
+
+  const isTabActive = (t) => {
+    if (t.path === '/') return location.pathname === '/'
+    return location.pathname.startsWith(t.path)
+  }
+
+  const isSubActive = (sub) => {
+    if (sub.path === '/alertas') return location.pathname === '/alertas'
+    return location.pathname === sub.path
+  }
 
   return (
     <div className="min-h-screen flex flex-col" style={{ background: 'var(--color-surface-0)' }}>
-      {/* Top header — thin */}
+      {/* Top header */}
       <header
         className="shrink-0 z-50"
-        style={{
-          background: 'var(--color-surface-1)',
-          borderBottom: '1px solid var(--color-border)',
-        }}
+        style={{ background: 'var(--color-surface-1)', borderBottom: '1px solid var(--color-border)' }}
       >
         <div className="px-4 sm:px-6 h-12 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -75,7 +100,7 @@ export default function App() {
             </div>
             <div>
               <h1 className="text-sm font-bold tracking-tight" style={{ color: 'var(--color-text-primary)' }}>
-                AgTech Nextipac
+                AgTech
               </h1>
               <p className="text-[10px] leading-none hidden sm:block" style={{ color: 'var(--color-text-muted)' }}>
                 Monitoreo inteligente
@@ -103,11 +128,7 @@ export default function App() {
             </button>
             <div
               className="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold"
-              style={{
-                background: 'var(--color-surface-4)',
-                color: 'var(--color-text-secondary)',
-                border: '1px solid var(--color-border)',
-              }}
+              style={{ background: 'var(--color-surface-4)', color: 'var(--color-text-secondary)', border: '1px solid var(--color-border)' }}
             >
               ED
             </div>
@@ -116,7 +137,6 @@ export default function App() {
       </header>
 
       <div className="flex flex-1 overflow-hidden">
-        {/* Mobile overlay */}
         {mobileOpen && (
           <div
             className="fixed inset-0 z-40 lg:hidden"
@@ -139,7 +159,7 @@ export default function App() {
             borderRight: '1px solid var(--color-border)',
           }}
         >
-          {/* Toggle button */}
+          {/* Toggle */}
           <div className="px-2 pt-3 pb-2 flex justify-center">
             <button
               onClick={() => setCollapsed(!collapsed)}
@@ -147,83 +167,126 @@ export default function App() {
               style={{ color: 'var(--color-text-muted)' }}
               onMouseEnter={e => e.currentTarget.style.background = 'var(--color-surface-3)'}
               onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-              title={collapsed ? 'Expandir sidebar' : 'Colapsar sidebar'}
             >
               {collapsed ? <ChevronsRight size={18} /> : <ChevronsLeft size={18} />}
             </button>
           </div>
 
-          {/* Navigation — expanded */}
+          {/* Expanded nav */}
           {!collapsed && (
             <div className="px-3 pb-4">
               <nav className="space-y-0.5">
                 {tabs.map(t => {
-                  const isActive = t.path === '/'
-                    ? location.pathname === '/'
-                    : location.pathname.startsWith(t.path)
+                  const active = isTabActive(t)
                   const Icon = t.icon
+                  const hasSub = !!t.sub
+                  const subOpen = hasSub && alertasOpen
+
                   return (
-                    <NavLink
-                      key={t.path}
-                      to={t.path}
-                      onClick={() => setMobileOpen(false)}
-                      className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200"
-                      style={{
-                        background: isActive ? 'var(--color-accent-green-dim)' : 'transparent',
-                        color: isActive ? 'var(--color-accent-green)' : 'var(--color-text-muted)',
-                        border: isActive ? '1px solid rgba(16,185,129,0.2)' : '1px solid transparent',
-                      }}
-                      onMouseEnter={e => {
-                        if (!isActive) {
-                          e.currentTarget.style.background = 'var(--color-surface-3)'
-                          e.currentTarget.style.color = 'var(--color-text-secondary)'
-                        }
-                      }}
-                      onMouseLeave={e => {
-                        if (!isActive) {
-                          e.currentTarget.style.background = 'transparent'
-                          e.currentTarget.style.color = 'var(--color-text-muted)'
-                        }
-                      }}
-                    >
-                      <Icon size={18} />
-                      <span>{t.label}</span>
-                    </NavLink>
+                    <div key={t.path}>
+                      <div
+                        className="flex items-center rounded-xl text-sm font-medium transition-all duration-200 cursor-pointer"
+                        style={{
+                          background: active ? 'var(--color-accent-green-dim)' : 'transparent',
+                          color: active ? 'var(--color-accent-green)' : 'var(--color-text-muted)',
+                          border: active ? '1px solid rgba(16,185,129,0.2)' : '1px solid transparent',
+                        }}
+                        onMouseEnter={e => {
+                          if (!active) { e.currentTarget.style.background = 'var(--color-surface-3)'; e.currentTarget.style.color = 'var(--color-text-secondary)' }
+                        }}
+                        onMouseLeave={e => {
+                          if (!active) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--color-text-muted)' }
+                        }}
+                      >
+                        <NavLink
+                          to={t.path}
+                          end={t.path === '/' || t.path === '/alertas'}
+                          onClick={() => {
+                            setMobileOpen(false)
+                            if (hasSub) setAlertasOpen(!alertasOpen)
+                          }}
+                          className="flex items-center gap-3 px-3 py-2.5 flex-1"
+                        >
+                          <Icon size={18} />
+                          <span>{t.label}</span>
+                        </NavLink>
+                        {hasSub && (
+                          <button
+                            onClick={(e) => { e.preventDefault(); setAlertasOpen(!alertasOpen) }}
+                            className="pr-3 py-2.5"
+                            style={{ color: 'inherit' }}
+                          >
+                            <ChevronsRight
+                              size={14}
+                              style={{
+                                transform: subOpen ? 'rotate(90deg)' : 'rotate(0deg)',
+                                transition: 'transform 0.2s',
+                              }}
+                            />
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Sub-items */}
+                      {hasSub && subOpen && (
+                        <div className="ml-5 mt-0.5 space-y-0.5 border-l" style={{ borderColor: 'var(--color-border)' }}>
+                          {t.sub.map(sub => {
+                            const subActive = isSubActive(sub)
+                            const SubIcon = sub.icon
+                            return (
+                              <NavLink
+                                key={sub.path}
+                                to={sub.path}
+                                end
+                                onClick={() => setMobileOpen(false)}
+                                className="flex items-center gap-2.5 pl-4 pr-3 py-2 rounded-r-lg text-xs font-medium transition-all duration-200"
+                                style={{
+                                  background: subActive ? 'var(--color-accent-green-dim)' : 'transparent',
+                                  color: subActive ? 'var(--color-accent-green)' : 'var(--color-text-muted)',
+                                }}
+                                onMouseEnter={e => {
+                                  if (!subActive) { e.currentTarget.style.background = 'var(--color-surface-3)'; e.currentTarget.style.color = 'var(--color-text-secondary)' }
+                                }}
+                                onMouseLeave={e => {
+                                  if (!subActive) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--color-text-muted)' }
+                                }}
+                              >
+                                <SubIcon size={14} />
+                                <span>{sub.label}</span>
+                              </NavLink>
+                            )
+                          })}
+                        </div>
+                      )}
+                    </div>
                   )
                 })}
               </nav>
             </div>
           )}
 
-          {/* Navigation — collapsed (icon rail) */}
+          {/* Collapsed nav */}
           {collapsed && (
             <nav className="px-1.5 pb-4 space-y-1">
               {tabs.map(t => {
-                const isActive = t.path === '/'
-                  ? location.pathname === '/'
-                  : location.pathname.startsWith(t.path)
+                const active = isTabActive(t)
                 const Icon = t.icon
                 return (
                   <NavLink
                     key={t.path}
                     to={t.path}
+                    end={t.path === '/' || t.path === '/alertas'}
                     className="flex items-center justify-center w-10 h-10 mx-auto rounded-xl transition-all duration-200"
                     style={{
-                      background: isActive ? 'var(--color-accent-green-dim)' : 'transparent',
-                      color: isActive ? 'var(--color-accent-green)' : 'var(--color-text-muted)',
-                      border: isActive ? '1px solid rgba(16,185,129,0.2)' : '1px solid transparent',
+                      background: active ? 'var(--color-accent-green-dim)' : 'transparent',
+                      color: active ? 'var(--color-accent-green)' : 'var(--color-text-muted)',
+                      border: active ? '1px solid rgba(16,185,129,0.2)' : '1px solid transparent',
                     }}
                     onMouseEnter={e => {
-                      if (!isActive) {
-                        e.currentTarget.style.background = 'var(--color-surface-3)'
-                        e.currentTarget.style.color = 'var(--color-text-secondary)'
-                      }
+                      if (!active) { e.currentTarget.style.background = 'var(--color-surface-3)'; e.currentTarget.style.color = 'var(--color-text-secondary)' }
                     }}
                     onMouseLeave={e => {
-                      if (!isActive) {
-                        e.currentTarget.style.background = 'transparent'
-                        e.currentTarget.style.color = 'var(--color-text-muted)'
-                      }
+                      if (!active) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--color-text-muted)' }
                     }}
                     title={t.label}
                   >
@@ -235,7 +298,7 @@ export default function App() {
           )}
         </aside>
 
-        {/* Main content */}
+        {/* Main */}
         <main className="flex-1 overflow-y-auto">
           <div className="max-w-[1400px] mx-auto px-4 sm:px-6 py-6">
             <Routes>
@@ -246,7 +309,10 @@ export default function App() {
               <Route path="/firma" element={<FirmaView predioId={predioId} />} />
               <Route path="/comparativo" element={<ComparativoView predioId={predioId} />} />
               <Route path="/clima" element={<ClimaView />} />
-              <Route path="/alertas" element={<AlertasView predioId={predioId} />} />
+              <Route path="/alertas" element={<AlertasView predioId={predioId} filter="todas" />} />
+              <Route path="/alertas/destacadas" element={<AlertasView predioId={predioId} filter="destacadas" />} />
+              <Route path="/alertas/borradas" element={<AlertasView predioId={predioId} filter="borradas" />} />
+              <Route path="/consultor" element={<ConsultorView predioId={predioId} />} />
             </Routes>
           </div>
         </main>
