@@ -37,7 +37,7 @@ const tabs = [
   { path: '/clima', label: 'Clima', icon: CloudSun },
   {
     path: '/alertas',
-    label: 'Alertas IA',
+    label: 'Alertas',
     icon: Bell,
     sub: [
       { path: '/alertas', label: 'Todas', icon: Bell },
@@ -45,7 +45,7 @@ const tabs = [
       { path: '/alertas/borradas', label: 'Borradas', icon: Trash2 },
     ],
   },
-  { path: '/consultor', label: 'Consultor IA', icon: MessageCircleQuestion },
+  { path: '/consultor', label: 'Consultor', icon: MessageCircleQuestion },
 ]
 
 export default function App() {

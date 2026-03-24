@@ -490,8 +490,11 @@ export default function PredioView({ predioId, onChangePredio, predios }) {
         </div>
       )}
 
+      {/* Notes */}
+      <NotesSection predioId={predioId} />
+
       {/* System status */}
-      <div className="animate-in stagger-5">
+      <div className="animate-in stagger-6">
         <p className="text-[10px] font-semibold uppercase tracking-widest mb-3 px-1" style={{ color: 'var(--color-text-muted)' }}>
           Estado del sistema
         </p>
@@ -525,9 +528,6 @@ export default function PredioView({ predioId, onChangePredio, predios }) {
           ))}
         </div>
       </div>
-
-      {/* Notes */}
-      <NotesSection predioId={predioId} />
     </div>
   )
 }
