@@ -13,8 +13,8 @@ import {
   Leaf,
   Menu,
   X,
-  PanelLeftClose,
-  PanelLeftOpen,
+  ChevronsLeft,
+  ChevronsRight,
 } from 'lucide-react'
 import OverviewView from './views/OverviewView'
 import NodoView from './views/NodoView'
@@ -45,7 +45,6 @@ export default function App() {
   const alertCount = alertas?.length || 0
   const hasAlerts = alertCount > 0
 
-  // Close mobile drawer on route change
   useEffect(() => { setMobileOpen(false) }, [location.pathname])
 
   return (
@@ -67,17 +66,6 @@ export default function App() {
               onClick={() => setMobileOpen(!mobileOpen)}
             >
               {mobileOpen ? <X size={20} /> : <Menu size={20} />}
-            </button>
-            {/* Desktop sidebar toggle */}
-            <button
-              className="hidden lg:flex p-1.5 rounded-lg transition-colors"
-              style={{ color: 'var(--color-text-muted)' }}
-              onClick={() => setCollapsed(!collapsed)}
-              onMouseEnter={e => e.currentTarget.style.background = 'var(--color-surface-3)'}
-              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-              title={collapsed ? 'Expandir sidebar' : 'Colapsar sidebar'}
-            >
-              {collapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
             </button>
             <div
               className="w-8 h-8 rounded-lg flex items-center justify-center"
@@ -137,81 +125,139 @@ export default function App() {
           />
         )}
 
-        {/* Sidebar — expanded */}
+        {/* Sidebar */}
         <aside
           className={`
-            shrink-0 overflow-y-auto scrollbar-none z-40
+            shrink-0 overflow-y-auto overflow-x-hidden scrollbar-none z-40
             fixed lg:static inset-y-0 left-0 top-12
             transform transition-all duration-200 ease-out
             ${mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
-            ${collapsed ? 'lg:hidden' : ''}
           `}
           style={{
-            width: 256,
+            width: collapsed ? 60 : 256,
             background: 'var(--color-surface-1)',
             borderRight: '1px solid var(--color-border)',
           }}
         >
-          {/* Predio selector */}
-          <div className="px-4 pt-5 pb-3">
-            <p className="text-[10px] font-semibold uppercase tracking-widest mb-2" style={{ color: 'var(--color-text-muted)' }}>
-              Predio
-            </p>
-            <div
-              className="relative flex items-center rounded-xl"
-              style={{ background: 'var(--color-surface-3)', border: '1px solid var(--color-border)' }}
+          {/* Toggle button */}
+          <div className="px-2 pt-3 pb-2 flex justify-center">
+            <button
+              onClick={() => setCollapsed(!collapsed)}
+              className="p-2 rounded-lg transition-colors w-full flex items-center justify-center"
+              style={{ color: 'var(--color-text-muted)' }}
+              onMouseEnter={e => e.currentTarget.style.background = 'var(--color-surface-3)'}
+              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+              title={collapsed ? 'Expandir sidebar' : 'Colapsar sidebar'}
             >
-              <select
-                value={predioId}
-                onChange={e => setPredioId(Number(e.target.value))}
-                className="w-full appearance-none bg-transparent px-3 py-2.5 pr-8 text-sm font-medium outline-none cursor-pointer"
-                style={{ color: 'var(--color-text-primary)' }}
-              >
-                {predios?.map(p => (
-                  <option key={p.predio_id} value={p.predio_id} style={{ background: '#1e2231', color: '#f0f2f5' }}>
-                    {p.nombre}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown size={14} className="absolute right-3 pointer-events-none" style={{ color: 'var(--color-text-muted)' }} />
-            </div>
+              {collapsed ? <ChevronsRight size={18} /> : <ChevronsLeft size={18} />}
+            </button>
           </div>
 
-          {/* Context info */}
-          {predio && (
-            <div className="px-4 pb-4">
-              <div
-                className="rounded-xl px-3 py-3 space-y-1.5"
-                style={{ background: 'var(--color-surface-3)', border: '1px solid var(--color-border)' }}
-              >
-                <span
-                  className="inline-block px-2 py-0.5 rounded-md text-[10px] font-semibold uppercase tracking-wide"
-                  style={{ background: 'var(--color-accent-green-dim)', color: 'var(--color-accent-green)' }}
+          {/* === EXPANDED CONTENT === */}
+          {!collapsed && (
+            <>
+              {/* Predio selector */}
+              <div className="px-4 pb-3">
+                <p className="text-[10px] font-semibold uppercase tracking-widest mb-2" style={{ color: 'var(--color-text-muted)' }}>
+                  Predio
+                </p>
+                <div
+                  className="relative flex items-center rounded-xl"
+                  style={{ background: 'var(--color-surface-3)', border: '1px solid var(--color-border)' }}
                 >
-                  {predio.cultivo || 'Aguacate Hass'}
-                </span>
-                <div className="space-y-0.5">
-                  {[
-                    predio.tipo_suelo || 'Andisol volcánico',
-                    `${predio.hectareas || 4} hectáreas`,
-                    predio.municipio || 'Nextipac, Jalisco',
-                  ].map((item, i) => (
-                    <p key={i} className="text-[11px]" style={{ color: 'var(--color-text-muted)' }}>{item}</p>
-                  ))}
+                  <select
+                    value={predioId}
+                    onChange={e => setPredioId(Number(e.target.value))}
+                    className="w-full appearance-none bg-transparent px-3 py-2.5 pr-8 text-sm font-medium outline-none cursor-pointer"
+                    style={{ color: 'var(--color-text-primary)' }}
+                  >
+                    {predios?.map(p => (
+                      <option key={p.predio_id} value={p.predio_id} style={{ background: '#1e2231', color: '#f0f2f5' }}>
+                        {p.nombre}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown size={14} className="absolute right-3 pointer-events-none" style={{ color: 'var(--color-text-muted)' }} />
                 </div>
               </div>
-            </div>
+
+              {/* Context info */}
+              {predio && (
+                <div className="px-4 pb-4">
+                  <div
+                    className="rounded-xl px-3 py-3 space-y-1.5"
+                    style={{ background: 'var(--color-surface-3)', border: '1px solid var(--color-border)' }}
+                  >
+                    <span
+                      className="inline-block px-2 py-0.5 rounded-md text-[10px] font-semibold uppercase tracking-wide"
+                      style={{ background: 'var(--color-accent-green-dim)', color: 'var(--color-accent-green)' }}
+                    >
+                      {predio.cultivo || 'Aguacate Hass'}
+                    </span>
+                    <div className="space-y-0.5">
+                      {[
+                        predio.tipo_suelo || 'Andisol volcánico',
+                        `${predio.hectareas || 4} hectáreas`,
+                        predio.municipio || 'Nextipac, Jalisco',
+                      ].map((item, i) => (
+                        <p key={i} className="text-[11px]" style={{ color: 'var(--color-text-muted)' }}>{item}</p>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Divider */}
+              <div className="mx-4 mb-2" style={{ borderBottom: '1px solid var(--color-border)' }} />
+
+              {/* Navigation expanded */}
+              <div className="px-3 pb-4">
+                <p className="text-[10px] font-semibold uppercase tracking-widest mb-2 px-1" style={{ color: 'var(--color-text-muted)' }}>
+                  Navegación
+                </p>
+                <nav className="space-y-0.5">
+                  {tabs.map(t => {
+                    const isActive = t.path === '/'
+                      ? location.pathname === '/'
+                      : location.pathname.startsWith(t.path)
+                    const Icon = t.icon
+                    return (
+                      <NavLink
+                        key={t.path}
+                        to={t.path}
+                        onClick={() => setMobileOpen(false)}
+                        className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200"
+                        style={{
+                          background: isActive ? 'var(--color-accent-green-dim)' : 'transparent',
+                          color: isActive ? 'var(--color-accent-green)' : 'var(--color-text-muted)',
+                          border: isActive ? '1px solid rgba(16,185,129,0.2)' : '1px solid transparent',
+                        }}
+                        onMouseEnter={e => {
+                          if (!isActive) {
+                            e.currentTarget.style.background = 'var(--color-surface-3)'
+                            e.currentTarget.style.color = 'var(--color-text-secondary)'
+                          }
+                        }}
+                        onMouseLeave={e => {
+                          if (!isActive) {
+                            e.currentTarget.style.background = 'transparent'
+                            e.currentTarget.style.color = 'var(--color-text-muted)'
+                          }
+                        }}
+                      >
+                        <Icon size={18} />
+                        <span>{t.label}</span>
+                      </NavLink>
+                    )
+                  })}
+                </nav>
+              </div>
+            </>
           )}
 
-          {/* Divider */}
-          <div className="mx-4 mb-2" style={{ borderBottom: '1px solid var(--color-border)' }} />
-
-          {/* Navigation */}
-          <div className="px-3 pb-4">
-            <p className="text-[10px] font-semibold uppercase tracking-widest mb-2 px-1" style={{ color: 'var(--color-text-muted)' }}>
-              Navegación
-            </p>
-            <nav className="space-y-0.5">
+          {/* === COLLAPSED CONTENT — icon rail === */}
+          {collapsed && (
+            <nav className="px-1.5 pb-4 space-y-1">
               {tabs.map(t => {
                 const isActive = t.path === '/'
                   ? location.pathname === '/'
@@ -221,8 +267,7 @@ export default function App() {
                   <NavLink
                     key={t.path}
                     to={t.path}
-                    onClick={() => setMobileOpen(false)}
-                    className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200"
+                    className="flex items-center justify-center w-10 h-10 mx-auto rounded-xl transition-all duration-200"
                     style={{
                       background: isActive ? 'var(--color-accent-green-dim)' : 'transparent',
                       color: isActive ? 'var(--color-accent-green)' : 'var(--color-text-muted)',
@@ -240,14 +285,14 @@ export default function App() {
                         e.currentTarget.style.color = 'var(--color-text-muted)'
                       }
                     }}
+                    title={t.label}
                   >
-                    <Icon size={18} />
-                    <span>{t.label}</span>
+                    <Icon size={20} />
                   </NavLink>
                 )
               })}
             </nav>
-          </div>
+          )}
         </aside>
 
         {/* Main content */}
