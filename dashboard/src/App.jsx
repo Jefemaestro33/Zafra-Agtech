@@ -137,7 +137,7 @@ export default function App() {
         {/* Sidebar */}
         <aside
           className={`
-            shrink-0 overflow-y-auto overflow-x-hidden scrollbar-none z-40
+            shrink-0 overflow-y-auto overflow-x-hidden scrollbar-none z-40 flex flex-col
             fixed inset-y-0 left-0 top-12
             transform transition-all duration-200 ease-out
             ${mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
@@ -163,7 +163,7 @@ export default function App() {
 
           {/* Expanded nav */}
           {!collapsed && (
-            <div className="flex flex-col flex-1">
+            <div className="flex flex-col flex-1 min-h-0">
               <div className="px-3 pb-4">
                 <nav className="space-y-0.5">
                   {tabs.map(t => {
@@ -268,7 +268,7 @@ export default function App() {
                       ED
                     </div>
                     <div className="min-w-0">
-                      <p className="text-sm font-medium truncate" style={{ color: 'var(--color-text-primary)' }}>Ernest Darell</p>
+                      <p className="text-sm font-medium truncate" style={{ color: 'var(--color-text-primary)' }}>Ernest</p>
                       <p className="text-[10px]" style={{ color: 'var(--color-text-muted)' }}>Admin</p>
                     </div>
                   </div>
@@ -279,7 +279,7 @@ export default function App() {
 
           {/* Collapsed nav */}
           {collapsed && (
-            <div className="flex flex-col flex-1">
+            <div className="flex flex-col flex-1 min-h-0">
               <nav className="px-1.5 pb-4 space-y-1">
                 {tabs.map(t => {
                   const active = isTabActive(t)
@@ -313,7 +313,7 @@ export default function App() {
                 <div
                   className="w-10 h-10 rounded-xl flex items-center justify-center text-xs font-bold"
                   style={{ background: 'var(--color-accent-green-dim)', color: 'var(--color-accent-green)', border: '1px solid rgba(16,185,129,0.2)' }}
-                  title="Ernest Darell — Admin"
+                  title="Ernest — Admin"
                 >
                   ED
                 </div>
