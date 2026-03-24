@@ -2,22 +2,10 @@ import { useState, useEffect } from 'react'
 import { Routes, Route, NavLink, useNavigate, useLocation } from 'react-router-dom'
 import { useApi } from './hooks/useApi'
 import {
-  LayoutDashboard,
-  Radio,
-  Droplets,
-  GitCompareArrows,
-  CloudSun,
-  BrainCircuit,
-  Bell,
-  Leaf,
-  Menu,
-  X,
-  ChevronsLeft,
-  ChevronsRight,
-  Info,
-  Star,
-  Trash2,
-  MessageCircleQuestion,
+  LayoutDashboard, Radio, Droplets, GitCompareArrows, CloudSun, BrainCircuit,
+  Bell, Leaf, Menu, X, ChevronsLeft, ChevronsRight, Info, Star, Trash2,
+  MessageCircleQuestion, Users, UserCog, History, Download, Receipt, DollarSign,
+  Settings, BellRing, Plug, DatabaseBackup, Sun, Moon, BookOpen, LogOut, ChevronUp,
 } from 'lucide-react'
 import OverviewView from './views/OverviewView'
 import NodoView from './views/NodoView'
@@ -27,6 +15,7 @@ import ClimaView from './views/ClimaView'
 import AlertasView from './views/AlertasView'
 import PredioView from './views/PredioView'
 import ConsultorView from './views/ConsultorView'
+import ProximamenteView from './views/ProximamenteView'
 
 const tabs = [
   { path: '/predio', label: 'Predio', icon: Info },
@@ -36,9 +25,7 @@ const tabs = [
   { path: '/comparativo', label: 'Comparativo', icon: GitCompareArrows },
   { path: '/clima', label: 'Clima', icon: CloudSun },
   {
-    path: '/alertas',
-    label: 'Alertas',
-    icon: Bell,
+    path: '/alertas', label: 'Alertas', icon: Bell,
     sub: [
       { path: '/alertas', label: 'Todas', icon: Bell },
       { path: '/alertas/destacadas', label: 'Destacadas', icon: Star },
@@ -46,6 +33,13 @@ const tabs = [
     ],
   },
   { path: '/consultor', label: 'Consultor', icon: MessageCircleQuestion },
+  { type: 'section', label: 'Administrador' },
+  { path: '/agronomos', label: 'Agrónomos', icon: Users },
+  { path: '/usuarios', label: 'Usuarios', icon: UserCog },
+  { path: '/historial', label: 'Historial', icon: History },
+  { path: '/exportar', label: 'Exportar datos', icon: Download },
+  { path: '/contabilidad', label: 'Contabilidad', icon: Receipt },
+  { path: '/finanzas', label: 'Finanzas', icon: DollarSign },
 ]
 
 export default function App() {
@@ -57,20 +51,19 @@ export default function App() {
   const [mobileOpen, setMobileOpen] = useState(false)
   const [collapsed, setCollapsed] = useState(false)
   const [alertasOpen, setAlertasOpen] = useState(false)
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false)
+  const [darkMode, setDarkMode] = useState(true)
 
   const alertCount = alertas?.length || 0
   const hasAlerts = alertCount > 0
 
-  useEffect(() => { setMobileOpen(false) }, [location.pathname])
-  useEffect(() => {
-    if (location.pathname.startsWith('/alertas')) setAlertasOpen(true)
-  }, [location.pathname])
+  useEffect(() => { setMobileOpen(false); setProfileMenuOpen(false) }, [location.pathname])
+  useEffect(() => { if (location.pathname.startsWith('/alertas')) setAlertasOpen(true) }, [location.pathname])
 
   const isTabActive = (t) => {
     if (t.path === '/') return location.pathname === '/'
     return location.pathname.startsWith(t.path)
   }
-
   const isSubActive = (sub) => {
     if (sub.path === '/alertas') return location.pathname === '/alertas'
     return location.pathname === sub.path
@@ -78,47 +71,27 @@ export default function App() {
 
   return (
     <div className="min-h-screen flex flex-col" style={{ background: 'var(--color-surface-0)' }}>
-      {/* Top header */}
-      <header
-        className="fixed top-0 left-0 right-0 z-50"
-        style={{ background: 'var(--color-surface-1)', borderBottom: '1px solid var(--color-border)' }}
-      >
+      {/* Header */}
+      <header className="fixed top-0 left-0 right-0 z-50" style={{ background: 'var(--color-surface-1)', borderBottom: '1px solid var(--color-border)' }}>
         <div className="px-4 sm:px-6 h-12 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <button
-              className="lg:hidden p-1.5 rounded-lg"
-              style={{ color: 'var(--color-text-muted)' }}
-              onClick={() => setMobileOpen(!mobileOpen)}
-            >
+            <button className="lg:hidden p-1.5 rounded-lg" style={{ color: 'var(--color-text-muted)' }} onClick={() => setMobileOpen(!mobileOpen)}>
               {mobileOpen ? <X size={20} /> : <Menu size={20} />}
             </button>
-            <div
-              className="w-8 h-8 rounded-lg flex items-center justify-center"
-              style={{ background: 'var(--color-glow-green)', border: '1px solid var(--color-accent-green-dim)' }}
-            >
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: 'var(--color-glow-green)', border: '1px solid var(--color-accent-green-dim)' }}>
               <Leaf size={16} style={{ color: 'var(--color-accent-green)' }} />
             </div>
-            <h1 className="text-sm font-bold tracking-tight" style={{ color: 'var(--color-text-primary)' }}>
-              AgTech
-            </h1>
+            <h1 className="text-sm font-bold tracking-tight" style={{ color: 'var(--color-text-primary)' }}>AgTech</h1>
           </div>
-
           <div className="flex items-center gap-2">
-            <button
-              onClick={() => navigate('/alertas')}
-              className="relative p-2 rounded-lg transition-colors"
+            <button onClick={() => navigate('/alertas')} className="relative p-2 rounded-lg transition-colors"
               style={{ color: hasAlerts ? 'var(--color-accent-amber)' : 'var(--color-text-muted)' }}
               onMouseEnter={e => e.currentTarget.style.background = 'var(--color-surface-3)'}
-              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-            >
+              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
               <Bell size={18} />
               {hasAlerts && (
-                <span
-                  className="absolute -top-0.5 -right-0.5 text-[10px] font-bold rounded-full w-[18px] h-[18px] flex items-center justify-center"
-                  style={{ background: 'var(--color-accent-red)', color: '#fff' }}
-                >
-                  {alertCount}
-                </span>
+                <span className="absolute -top-0.5 -right-0.5 text-[10px] font-bold rounded-full w-[18px] h-[18px] flex items-center justify-center"
+                  style={{ background: 'var(--color-accent-red)', color: '#fff' }}>{alertCount}</span>
               )}
             </button>
           </div>
@@ -126,13 +99,7 @@ export default function App() {
       </header>
 
       <div className="flex flex-1 overflow-hidden">
-        {mobileOpen && (
-          <div
-            className="fixed inset-0 z-40 lg:hidden"
-            style={{ background: 'rgba(0,0,0,0.5)' }}
-            onClick={() => setMobileOpen(false)}
-          />
-        )}
+        {mobileOpen && <div className="fixed inset-0 z-40 lg:hidden" style={{ background: 'rgba(0,0,0,0.5)' }} onClick={() => setMobileOpen(false)} />}
 
         {/* Sidebar */}
         <aside
@@ -142,107 +109,66 @@ export default function App() {
             transform transition-all duration-200 ease-out
             ${mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
           `}
-          style={{
-            width: collapsed ? 60 : 220,
-            background: 'var(--color-surface-1)',
-            borderRight: '1px solid var(--color-border)',
-          }}
+          style={{ width: collapsed ? 60 : 220, background: 'var(--color-surface-1)', borderRight: '1px solid var(--color-border)' }}
         >
           {/* Toggle */}
-          <div className="px-2 pt-3 pb-2 flex justify-center">
-            <button
-              onClick={() => setCollapsed(!collapsed)}
-              className="p-2 rounded-lg transition-colors w-full flex items-center justify-center"
+          <div className="px-2 pt-3 pb-2 flex justify-center shrink-0">
+            <button onClick={() => setCollapsed(!collapsed)} className="p-2 rounded-lg transition-colors w-full flex items-center justify-center"
               style={{ color: 'var(--color-text-muted)' }}
               onMouseEnter={e => e.currentTarget.style.background = 'var(--color-surface-3)'}
-              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-            >
+              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
               {collapsed ? <ChevronsRight size={18} /> : <ChevronsLeft size={18} />}
             </button>
           </div>
 
-          {/* Expanded nav */}
+          {/* Expanded */}
           {!collapsed && (
             <div className="flex flex-col flex-1 min-h-0">
-              <div className="px-3 pb-4">
+              <div className="px-3 pb-4 flex-1 overflow-y-auto scrollbar-none">
                 <nav className="space-y-0.5">
-                  {tabs.map(t => {
+                  {tabs.map((t, idx) => {
+                    if (t.type === 'section') return (
+                      <div key={idx} className="pt-4 pb-1 px-1">
+                        <div className="mb-2" style={{ borderTop: '1px solid var(--color-border)' }} />
+                        <p className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: 'var(--color-text-muted)' }}>{t.label}</p>
+                      </div>
+                    )
                     const active = isTabActive(t)
                     const Icon = t.icon
                     const hasSub = !!t.sub
                     const subOpen = hasSub && alertasOpen
-
                     return (
                       <div key={t.path}>
-                        <div
-                          className="flex items-center rounded-xl text-sm font-medium transition-all duration-200 cursor-pointer"
+                        <div className="flex items-center rounded-xl text-sm font-medium transition-all duration-200 cursor-pointer"
                           style={{
                             background: active ? 'var(--color-accent-green-dim)' : 'transparent',
                             color: active ? 'var(--color-accent-green)' : 'var(--color-text-muted)',
                             border: active ? '1px solid rgba(16,185,129,0.2)' : '1px solid transparent',
                           }}
-                          onMouseEnter={e => {
-                            if (!active) { e.currentTarget.style.background = 'var(--color-surface-3)'; e.currentTarget.style.color = 'var(--color-text-secondary)' }
-                          }}
-                          onMouseLeave={e => {
-                            if (!active) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--color-text-muted)' }
-                          }}
-                        >
-                          <NavLink
-                            to={t.path}
-                            end={t.path === '/' || t.path === '/alertas'}
-                            onClick={() => {
-                              setMobileOpen(false)
-                              if (hasSub) setAlertasOpen(!alertasOpen)
-                            }}
-                            className="flex items-center gap-3 px-3 py-2.5 flex-1"
-                          >
-                            <Icon size={18} />
-                            <span>{t.label}</span>
+                          onMouseEnter={e => { if (!active) { e.currentTarget.style.background = 'var(--color-surface-3)'; e.currentTarget.style.color = 'var(--color-text-secondary)' } }}
+                          onMouseLeave={e => { if (!active) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--color-text-muted)' } }}>
+                          <NavLink to={t.path} end={t.path === '/' || t.path === '/alertas'}
+                            onClick={() => { setMobileOpen(false); if (hasSub) setAlertasOpen(!alertasOpen) }}
+                            className="flex items-center gap-3 px-3 py-2.5 flex-1">
+                            <Icon size={18} /><span>{t.label}</span>
                           </NavLink>
                           {hasSub && (
-                            <button
-                              onClick={(e) => { e.preventDefault(); setAlertasOpen(!alertasOpen) }}
-                              className="pr-3 py-2.5"
-                              style={{ color: 'inherit' }}
-                            >
-                              <ChevronsRight
-                                size={14}
-                                style={{
-                                  transform: subOpen ? 'rotate(90deg)' : 'rotate(0deg)',
-                                  transition: 'transform 0.2s',
-                                }}
-                              />
+                            <button onClick={e => { e.preventDefault(); setAlertasOpen(!alertasOpen) }} className="pr-3 py-2.5" style={{ color: 'inherit' }}>
+                              <ChevronsRight size={14} style={{ transform: subOpen ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }} />
                             </button>
                           )}
                         </div>
-
-                        {/* Sub-items */}
                         {hasSub && subOpen && (
                           <div className="ml-5 mt-0.5 space-y-0.5 border-l" style={{ borderColor: 'var(--color-border)' }}>
                             {t.sub.map(sub => {
-                              const subActive = isSubActive(sub)
-                              const SubIcon = sub.icon
+                              const sa = isSubActive(sub); const SI = sub.icon
                               return (
-                                <NavLink
-                                  key={sub.path}
-                                  to={sub.path}
-                                  end
-                                  onClick={() => setMobileOpen(false)}
+                                <NavLink key={sub.path} to={sub.path} end onClick={() => setMobileOpen(false)}
                                   className="flex items-center gap-2.5 pl-4 pr-3 py-2 rounded-r-lg text-xs font-medium transition-all duration-200"
-                                  style={{
-                                    background: subActive ? 'var(--color-accent-green-dim)' : 'transparent',
-                                    color: subActive ? 'var(--color-accent-green)' : 'var(--color-text-muted)',
-                                  }}
-                                  onMouseEnter={e => {
-                                    if (!subActive) { e.currentTarget.style.background = 'var(--color-surface-3)'; e.currentTarget.style.color = 'var(--color-text-secondary)' }
-                                  }}
-                                  onMouseLeave={e => {
-                                    if (!subActive) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--color-text-muted)' }
-                                  }}
-                                >
-                                  <SubIcon size={14} />
-                                  <span>{sub.label}</span>
+                                  style={{ background: sa ? 'var(--color-accent-green-dim)' : 'transparent', color: sa ? 'var(--color-accent-green)' : 'var(--color-text-muted)' }}
+                                  onMouseEnter={e => { if (!sa) { e.currentTarget.style.background = 'var(--color-surface-3)'; e.currentTarget.style.color = 'var(--color-text-secondary)' } }}
+                                  onMouseLeave={e => { if (!sa) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--color-text-muted)' } }}>
+                                  <SI size={14} /><span>{sub.label}</span>
                                 </NavLink>
                               )
                             })}
@@ -255,11 +181,93 @@ export default function App() {
               </div>
 
               {/* Profile — bottom */}
-              <div className="mt-auto px-3 pb-4">
+              <div className="mt-auto px-3 pb-4 relative">
                 <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: 12 }}>
-                  <div
-                    className="flex items-center gap-3 px-3 py-2.5 rounded-xl"
-                    style={{ background: 'var(--color-surface-2)', border: '1px solid var(--color-border)' }}
+                  {/* Profile menu popup */}
+                  {profileMenuOpen && (
+                    <>
+                      <div className="fixed inset-0 z-30" onClick={() => setProfileMenuOpen(false)} />
+                      <div
+                        className="absolute bottom-full left-3 right-3 mb-2 rounded-2xl py-2 z-40 animate-in shadow-2xl"
+                        style={{ background: 'var(--color-surface-3)', border: '1px solid var(--color-border-light)' }}
+                      >
+                        <div className="px-4 py-2 mb-1" style={{ borderBottom: '1px solid var(--color-border)' }}>
+                          <p className="text-xs font-bold" style={{ color: 'var(--color-text-primary)' }}>Ernest</p>
+                          <p className="text-[10px]" style={{ color: 'var(--color-text-muted)' }}>Administrador · AgTech</p>
+                        </div>
+
+                        <p className="px-4 pt-2 pb-1 text-[9px] font-semibold uppercase tracking-widest" style={{ color: 'var(--color-text-muted)' }}>Configuración</p>
+                        {[
+                          { icon: Settings, label: 'Configuración de alertas', desc: 'Umbrales Phytophthora, riego, batería' },
+                          { icon: BellRing, label: 'Notificaciones', desc: 'Email, WhatsApp, canales' },
+                          { icon: Plug, label: 'Integraciones', desc: 'API Keys, webhooks, Telegram' },
+                          { icon: DatabaseBackup, label: 'Respaldos', desc: 'Backup y restore de datos' },
+                        ].map((item, i) => (
+                          <button
+                            key={i}
+                            onClick={() => { setProfileMenuOpen(false); alert('Próximamente: ' + item.label) }}
+                            className="w-full flex items-center gap-3 px-4 py-2 text-left transition-colors"
+                            onMouseEnter={e => e.currentTarget.style.background = 'var(--color-surface-4)'}
+                            onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                          >
+                            <item.icon size={15} style={{ color: 'var(--color-text-muted)' }} />
+                            <div>
+                              <p className="text-xs font-medium" style={{ color: 'var(--color-text-primary)' }}>{item.label}</p>
+                              <p className="text-[10px]" style={{ color: 'var(--color-text-muted)' }}>{item.desc}</p>
+                            </div>
+                          </button>
+                        ))}
+
+                        <div className="my-1 mx-3" style={{ borderTop: '1px solid var(--color-border)' }} />
+
+                        <p className="px-4 pt-2 pb-1 text-[9px] font-semibold uppercase tracking-widest" style={{ color: 'var(--color-text-muted)' }}>Preferencias</p>
+                        <button
+                          onClick={() => { setDarkMode(!darkMode); setProfileMenuOpen(false) }}
+                          className="w-full flex items-center gap-3 px-4 py-2 text-left transition-colors"
+                          onMouseEnter={e => e.currentTarget.style.background = 'var(--color-surface-4)'}
+                          onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                        >
+                          {darkMode ? <Moon size={15} style={{ color: 'var(--color-text-muted)' }} /> : <Sun size={15} style={{ color: 'var(--color-text-muted)' }} />}
+                          <div>
+                            <p className="text-xs font-medium" style={{ color: 'var(--color-text-primary)' }}>Tema {darkMode ? 'oscuro' : 'claro'}</p>
+                            <p className="text-[10px]" style={{ color: 'var(--color-text-muted)' }}>Cambiar apariencia</p>
+                          </div>
+                        </button>
+                        <button
+                          onClick={() => { setProfileMenuOpen(false); alert('Próximamente: Documentación') }}
+                          className="w-full flex items-center gap-3 px-4 py-2 text-left transition-colors"
+                          onMouseEnter={e => e.currentTarget.style.background = 'var(--color-surface-4)'}
+                          onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                        >
+                          <BookOpen size={15} style={{ color: 'var(--color-text-muted)' }} />
+                          <div>
+                            <p className="text-xs font-medium" style={{ color: 'var(--color-text-primary)' }}>Documentación</p>
+                            <p className="text-[10px]" style={{ color: 'var(--color-text-muted)' }}>Guías y ayuda</p>
+                          </div>
+                        </button>
+
+                        <div className="my-1 mx-3" style={{ borderTop: '1px solid var(--color-border)' }} />
+
+                        <button
+                          onClick={() => { setProfileMenuOpen(false); alert('Próximamente: Cerrar sesión') }}
+                          className="w-full flex items-center gap-3 px-4 py-2 text-left transition-colors"
+                          onMouseEnter={e => { e.currentTarget.style.background = 'var(--color-glow-red)' }}
+                          onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
+                        >
+                          <LogOut size={15} style={{ color: 'var(--color-accent-red)' }} />
+                          <p className="text-xs font-medium" style={{ color: 'var(--color-accent-red)' }}>Cerrar sesión</p>
+                        </button>
+                      </div>
+                    </>
+                  )}
+
+                  {/* Profile button */}
+                  <button
+                    onClick={() => setProfileMenuOpen(!profileMenuOpen)}
+                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors"
+                    style={{ background: profileMenuOpen ? 'var(--color-surface-3)' : 'var(--color-surface-2)', border: '1px solid var(--color-border)' }}
+                    onMouseEnter={e => e.currentTarget.style.background = 'var(--color-surface-3)'}
+                    onMouseLeave={e => { if (!profileMenuOpen) e.currentTarget.style.background = 'var(--color-surface-2)' }}
                   >
                     <div
                       className="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold shrink-0"
@@ -267,56 +275,100 @@ export default function App() {
                     >
                       ED
                     </div>
-                    <div className="min-w-0">
+                    <div className="min-w-0 text-left">
                       <p className="text-sm font-medium truncate" style={{ color: 'var(--color-text-primary)' }}>Ernest</p>
                       <p className="text-[10px]" style={{ color: 'var(--color-text-muted)' }}>Admin</p>
                     </div>
-                  </div>
+                    <ChevronUp size={14} className="ml-auto" style={{ color: 'var(--color-text-muted)', transform: profileMenuOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }} />
+                  </button>
                 </div>
               </div>
             </div>
           )}
 
-          {/* Collapsed nav */}
+          {/* Collapsed */}
           {collapsed && (
             <div className="flex flex-col flex-1 min-h-0">
-              <nav className="px-1.5 pb-4 space-y-1">
-                {tabs.map(t => {
-                  const active = isTabActive(t)
-                  const Icon = t.icon
+              <nav className="px-1.5 pb-4 space-y-1 flex-1 overflow-y-auto scrollbar-none">
+                {tabs.map((t, idx) => {
+                  if (t.type === 'section') return <div key={idx} className="my-2 mx-2" style={{ borderBottom: '1px solid var(--color-border)' }} />
+                  const active = isTabActive(t); const Icon = t.icon
                   return (
-                    <NavLink
-                      key={t.path}
-                      to={t.path}
-                      end={t.path === '/' || t.path === '/alertas'}
+                    <NavLink key={t.path} to={t.path} end={t.path === '/' || t.path === '/alertas'}
                       className="flex items-center justify-center w-10 h-10 mx-auto rounded-xl transition-all duration-200"
                       style={{
                         background: active ? 'var(--color-accent-green-dim)' : 'transparent',
                         color: active ? 'var(--color-accent-green)' : 'var(--color-text-muted)',
                         border: active ? '1px solid rgba(16,185,129,0.2)' : '1px solid transparent',
                       }}
-                      onMouseEnter={e => {
-                        if (!active) { e.currentTarget.style.background = 'var(--color-surface-3)'; e.currentTarget.style.color = 'var(--color-text-secondary)' }
-                      }}
-                      onMouseLeave={e => {
-                        if (!active) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--color-text-muted)' }
-                      }}
-                      title={t.label}
-                    >
+                      onMouseEnter={e => { if (!active) { e.currentTarget.style.background = 'var(--color-surface-3)'; e.currentTarget.style.color = 'var(--color-text-secondary)' } }}
+                      onMouseLeave={e => { if (!active) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--color-text-muted)' } }}
+                      title={t.label}>
                       <Icon size={20} />
                     </NavLink>
                   )
                 })}
               </nav>
-
-              <div className="mt-auto pb-4 flex justify-center">
-                <div
-                  className="w-10 h-10 rounded-xl flex items-center justify-center text-xs font-bold"
-                  style={{ background: 'var(--color-accent-green-dim)', color: 'var(--color-accent-green)', border: '1px solid rgba(16,185,129,0.2)' }}
+              <div className="mt-auto pb-4 flex justify-center relative">
+                {profileMenuOpen && (
+                  <>
+                    <div className="fixed inset-0 z-30" onClick={() => setProfileMenuOpen(false)} />
+                    <div
+                      className="absolute bottom-full left-1 mb-2 rounded-2xl py-2 z-40 animate-in shadow-2xl"
+                      style={{ background: 'var(--color-surface-3)', border: '1px solid var(--color-border-light)', width: 220 }}
+                    >
+                      <div className="px-4 py-2 mb-1" style={{ borderBottom: '1px solid var(--color-border)' }}>
+                        <p className="text-xs font-bold" style={{ color: 'var(--color-text-primary)' }}>Ernest</p>
+                        <p className="text-[10px]" style={{ color: 'var(--color-text-muted)' }}>Administrador · AgTech</p>
+                      </div>
+                      {[
+                        { icon: Settings, label: 'Config. alertas' },
+                        { icon: BellRing, label: 'Notificaciones' },
+                        { icon: Plug, label: 'Integraciones' },
+                        { icon: DatabaseBackup, label: 'Respaldos' },
+                      ].map((item, i) => (
+                        <button key={i} onClick={() => { setProfileMenuOpen(false); alert('Próximamente: ' + item.label) }}
+                          className="w-full flex items-center gap-3 px-4 py-2 text-left transition-colors"
+                          onMouseEnter={e => e.currentTarget.style.background = 'var(--color-surface-4)'}
+                          onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                          <item.icon size={14} style={{ color: 'var(--color-text-muted)' }} />
+                          <span className="text-xs" style={{ color: 'var(--color-text-primary)' }}>{item.label}</span>
+                        </button>
+                      ))}
+                      <div className="my-1 mx-3" style={{ borderTop: '1px solid var(--color-border)' }} />
+                      <button onClick={() => { setDarkMode(!darkMode); setProfileMenuOpen(false) }}
+                        className="w-full flex items-center gap-3 px-4 py-2 text-left transition-colors"
+                        onMouseEnter={e => e.currentTarget.style.background = 'var(--color-surface-4)'}
+                        onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                        {darkMode ? <Moon size={14} style={{ color: 'var(--color-text-muted)' }} /> : <Sun size={14} style={{ color: 'var(--color-text-muted)' }} />}
+                        <span className="text-xs" style={{ color: 'var(--color-text-primary)' }}>Tema {darkMode ? 'oscuro' : 'claro'}</span>
+                      </button>
+                      <button onClick={() => { setProfileMenuOpen(false); alert('Próximamente: Docs') }}
+                        className="w-full flex items-center gap-3 px-4 py-2 text-left transition-colors"
+                        onMouseEnter={e => e.currentTarget.style.background = 'var(--color-surface-4)'}
+                        onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                        <BookOpen size={14} style={{ color: 'var(--color-text-muted)' }} />
+                        <span className="text-xs" style={{ color: 'var(--color-text-primary)' }}>Documentación</span>
+                      </button>
+                      <div className="my-1 mx-3" style={{ borderTop: '1px solid var(--color-border)' }} />
+                      <button onClick={() => { setProfileMenuOpen(false); alert('Próximamente') }}
+                        className="w-full flex items-center gap-3 px-4 py-2 text-left transition-colors"
+                        onMouseEnter={e => e.currentTarget.style.background = 'var(--color-glow-red)'}
+                        onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                        <LogOut size={14} style={{ color: 'var(--color-accent-red)' }} />
+                        <span className="text-xs" style={{ color: 'var(--color-accent-red)' }}>Cerrar sesión</span>
+                      </button>
+                    </div>
+                  </>
+                )}
+                <button
+                  onClick={() => setProfileMenuOpen(!profileMenuOpen)}
+                  className="w-10 h-10 rounded-xl flex items-center justify-center text-xs font-bold transition-colors"
+                  style={{ background: profileMenuOpen ? 'var(--color-surface-3)' : 'var(--color-accent-green-dim)', color: 'var(--color-accent-green)', border: '1px solid rgba(16,185,129,0.2)' }}
                   title="Ernest — Admin"
                 >
                   ED
-                </div>
+                </button>
               </div>
             </div>
           )}
@@ -337,6 +389,17 @@ export default function App() {
               <Route path="/alertas/destacadas" element={<AlertasView predioId={predioId} filter="destacadas" />} />
               <Route path="/alertas/borradas" element={<AlertasView predioId={predioId} filter="borradas" />} />
               <Route path="/consultor" element={<ConsultorView predioId={predioId} />} />
+              <Route path="/agronomos" element={<ProximamenteView title="Agrónomos" description="Gestión del equipo de campo: agregar, quitar y asignar agrónomos a predios. Control de accesos por rol." icon={Users} />} />
+              <Route path="/usuarios" element={<ProximamenteView title="Usuarios" description="Administración de usuarios del sistema: roles (admin, agrónomo, observador), permisos y accesos al dashboard." icon={UserCog} />} />
+              <Route path="/historial" element={<ProximamenteView title="Historial de actividad" description="Registro completo de quién hizo qué y cuándo: cambios en predios, alertas generadas, diagnósticos IA, y acciones del equipo." icon={History} />} />
+              <Route path="/exportar" element={<ProximamenteView title="Exportar datos" description="Descarga lecturas de sensores, alertas, reportes y firmas hídricas en formato CSV o PDF para análisis externo." icon={Download} />} />
+              <Route path="/contabilidad" element={<ProximamenteView title="Contabilidad" description="Registro de gastos operativos, costos de laboratorio, hardware y mantenimiento por predio." icon={Receipt} />} />
+              <Route path="/finanzas" element={<ProximamenteView title="Finanzas" description="Proyección de ingresos por predio, tracking del 30% de incremento de producción, y análisis de rentabilidad." icon={DollarSign} />} />
+              <Route path="/config/alertas" element={<ProximamenteView title="Configuración de alertas" description="Ajusta los umbrales de Phytophthora, riego, batería y sensores offline para personalizar cuándo se generan alertas." icon={Settings} />} />
+              <Route path="/config/notificaciones" element={<ProximamenteView title="Notificaciones" description="Configura cómo y dónde recibes alertas: email, WhatsApp, Telegram, o solo en el dashboard." icon={BellRing} />} />
+              <Route path="/config/integraciones" element={<ProximamenteView title="Integraciones" description="Administra API keys de Claude, tokens de Telegram, webhooks y conexiones con servicios externos." icon={Plug} />} />
+              <Route path="/config/respaldos" element={<ProximamenteView title="Respaldos" description="Backup y restore de la base de datos. Historial de respaldos automáticos y opción de descarga manual." icon={DatabaseBackup} />} />
+              <Route path="/docs" element={<ProximamenteView title="Documentación" description="Guías de uso del sistema, documentación técnica, y recursos de ayuda para el equipo." icon={BookOpen} />} />
             </Routes>
           </div>
         </main>
