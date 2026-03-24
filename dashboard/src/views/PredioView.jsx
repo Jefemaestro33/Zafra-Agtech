@@ -198,7 +198,7 @@ function NotesSection({ predioId }) {
         onConfirm={() => handleDelete(deleteConfirm)}
         onCancel={() => setDeleteConfirm(null)}
       />
-      <div className="animate-in stagger-5">
+      <div className="animate-in stagger-6">
         <p className="text-[10px] font-semibold uppercase tracking-widest mb-3 px-1" style={{ color: 'var(--color-text-muted)' }}>
           Notas del predio
         </p>
@@ -398,9 +398,65 @@ export default function PredioView({ predioId, onChangePredio, predios }) {
         </div>
       </div>
 
+      {/* Agrónomos asignados */}
+      <div className="animate-in stagger-3">
+        <div className="flex items-center justify-between mb-3 px-1">
+          <p className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: 'var(--color-text-muted)' }}>
+            Agrónomos asignados
+          </p>
+        </div>
+        <div
+          className="rounded-2xl overflow-hidden"
+          style={{ background: 'var(--color-surface-2)', border: '1px solid var(--color-border)' }}
+        >
+          {[
+            { name: 'Salvador Jayat', role: 'Agrónomo de campo', status: 'activo' },
+          ].map((agro, i) => (
+            <div
+              key={i}
+              className="flex items-center justify-between px-5 py-3.5 transition-colors"
+              style={{ borderBottom: '1px solid var(--color-border)' }}
+              onMouseEnter={e => e.currentTarget.style.background = 'var(--color-surface-3)'}
+              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+            >
+              <div className="flex items-center gap-3">
+                <div
+                  className="w-9 h-9 rounded-lg flex items-center justify-center text-xs font-bold"
+                  style={{ background: 'var(--color-accent-green-dim)', color: 'var(--color-accent-green)', border: '1px solid rgba(16,185,129,0.2)' }}
+                >
+                  {agro.name.split(' ').map(n => n[0]).join('')}
+                </div>
+                <div>
+                  <p className="text-sm font-medium" style={{ color: 'var(--color-text-primary)' }}>{agro.name}</p>
+                  <p className="text-[11px]" style={{ color: 'var(--color-text-muted)' }}>{agro.role}</p>
+                </div>
+              </div>
+              <span
+                className="text-[10px] px-2.5 py-1 rounded-full font-semibold uppercase"
+                style={{
+                  background: agro.status === 'activo' ? 'var(--color-accent-green-dim)' : 'var(--color-surface-4)',
+                  color: agro.status === 'activo' ? 'var(--color-accent-green)' : 'var(--color-text-muted)',
+                  border: `1px solid ${agro.status === 'activo' ? 'rgba(16,185,129,0.2)' : 'var(--color-border)'}`,
+                }}
+              >
+                {agro.status}
+              </span>
+            </div>
+          ))}
+          <div
+            className="px-5 py-3 flex items-center justify-center cursor-pointer transition-colors"
+            style={{ color: 'var(--color-text-muted)' }}
+            onMouseEnter={e => { e.currentTarget.style.background = 'var(--color-surface-3)'; e.currentTarget.style.color = 'var(--color-text-secondary)' }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--color-text-muted)' }}
+          >
+            <span className="text-xs font-medium">+ Agregar agrónomo</span>
+          </div>
+        </div>
+      </div>
+
       {/* Quick stats */}
       {kpis && (
-        <div className="animate-in stagger-3">
+        <div className="animate-in stagger-4">
           <p className="text-[10px] font-semibold uppercase tracking-widest mb-3 px-1" style={{ color: 'var(--color-text-muted)' }}>
             Resumen operativo
           </p>
@@ -435,7 +491,7 @@ export default function PredioView({ predioId, onChangePredio, predios }) {
       )}
 
       {/* System status */}
-      <div className="animate-in stagger-4">
+      <div className="animate-in stagger-5">
         <p className="text-[10px] font-semibold uppercase tracking-widest mb-3 px-1" style={{ color: 'var(--color-text-muted)' }}>
           Estado del sistema
         </p>

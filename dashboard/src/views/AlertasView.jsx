@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useApi } from '../hooks/useApi'
-import { Bell, Calendar, BarChart3, CheckCircle, BrainCircuit, Send, FileText, Copy, Check, Loader2, ShieldAlert, Droplets, WifiOff, BatteryWarning } from 'lucide-react'
+import { Bell, Calendar, BarChart3, CheckCircle, BrainCircuit, Send, FileText, Copy, Check, Loader2, ShieldAlert, Droplets, WifiOff, BatteryWarning, ChevronDown, ChevronUp } from 'lucide-react'
 import KpiCard from '../components/KpiCard'
 import EmptyState from '../components/EmptyState'
 import Loading from '../components/Loading'
@@ -113,10 +113,12 @@ function AlertaCard({ a, onDiagnosticoGenerated }) {
   const [reporte, setReporte] = useState(null)
   const [localDiag, setLocalDiag] = useState(null)
   const [copied, setCopied] = useState(false)
+  const [expanded, setExpanded] = useState(true)
 
   const diag = localDiag || getDiagnostico(a.datos)
   const config = getAlertConfig(a.tipo)
   const AlertIcon = config.Icon
+  const hasContent = diag || reporte
 
   const handleGenerarDiagnostico = async () => {
     setLoadingDiag(true)
@@ -124,6 +126,7 @@ function AlertaCard({ a, onDiagnosticoGenerated }) {
       const r = await fetch(`/api/alertas/${a.id}/diagnostico`, { method: 'POST' })
       const data = await r.json()
       setLocalDiag(data.diagnostico)
+      setExpanded(true)
       if (onDiagnosticoGenerated) onDiagnosticoGenerated()
     } catch (e) {
       console.error(e)
@@ -132,7 +135,7 @@ function AlertaCard({ a, onDiagnosticoGenerated }) {
     }
   }
 
-  const handleEnviarSalvador = () => {
+  const handleEnviarAgronomo = () => {
     const d = diag || {}
     const text = [
       `*${config.label}* — ${a.nombre || `Nodo ${a.nodo_id}`}`,
@@ -156,6 +159,7 @@ function AlertaCard({ a, onDiagnosticoGenerated }) {
       const r = await fetch('/api/reportes/agricultor?predio_id=1', { method: 'POST' })
       const data = await r.json()
       setReporte(data.reporte)
+      setExpanded(true)
     } catch (e) {
       console.error(e)
     } finally {
@@ -183,37 +187,61 @@ function AlertaCard({ a, onDiagnosticoGenerated }) {
         borderLeft: `4px solid ${config.border}`,
       }}
     >
-      <div className="p-5">
-        <div className="flex items-start gap-4">
-          <div
-            className="rounded-xl p-2.5 shrink-0"
-            style={{ background: config.bg, border: `1px solid ${config.border}33` }}
-          >
-            <AlertIcon size={18} style={{ color: config.border }} />
+      {/* Header — always visible, clickable to toggle */}
+      <div
+        className="p-4 flex items-center gap-4 cursor-pointer transition-colors"
+        onClick={() => setExpanded(!expanded)}
+        onMouseEnter={e => e.currentTarget.style.background = 'var(--color-surface-3)'}
+        onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+      >
+        <div
+          className="rounded-xl p-2.5 shrink-0"
+          style={{ background: config.bg, border: `1px solid ${config.border}33` }}
+        >
+          <AlertIcon size={18} style={{ color: config.border }} />
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2 flex-wrap">
+            <h3 className="text-sm font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+              {config.label}
+            </h3>
+            <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
+              {a.nombre || `Nodo ${a.nodo_id}`}
+            </span>
+            <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>·</span>
+            <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
+              {timeAgo(a.tiempo)}
+            </span>
           </div>
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2 flex-wrap">
-              <h3 className="text-sm font-semibold" style={{ color: 'var(--color-text-primary)' }}>
-                {config.label}
-              </h3>
-              <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
-                {a.nombre || `Nodo ${a.nodo_id}`}
-              </span>
-              <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>·</span>
-              <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
-                {timeAgo(a.tiempo)}
-              </span>
-            </div>
-            <p className="text-xs mt-1.5 line-clamp-2" style={{ color: 'var(--color-text-muted)' }}>
-              {formatDatos(a.datos)}
-            </p>
+          <p className="text-xs mt-1 line-clamp-1" style={{ color: 'var(--color-text-muted)' }}>
+            {formatDatos(a.datos)}
+          </p>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          {hasContent && !expanded && (
+            <span
+              className="text-[10px] px-2 py-0.5 rounded-md font-medium"
+              style={{ background: 'var(--color-accent-green-dim)', color: 'var(--color-accent-green)' }}
+            >
+              Reporte listo
+            </span>
+          )}
+          <div style={{ color: 'var(--color-text-muted)' }}>
+            {expanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+          </div>
+        </div>
+      </div>
 
+      {/* Expandable content */}
+      {expanded && (
+        <div className="px-4 pb-4" style={{ borderTop: '1px solid var(--color-border)' }}>
+          <div className="pt-3 ml-12">
             {diag ? (
               <DiagnosticoSection diag={diag} />
             ) : (
-              <div className="mt-3">
+              <div className="mt-1">
                 <button
-                  onClick={handleGenerarDiagnostico}
+                  onClick={(e) => { e.stopPropagation(); handleGenerarDiagnostico() }}
                   disabled={loadingDiag}
                   className="flex items-center gap-2 text-xs px-4 py-2 rounded-xl font-medium transition-all duration-200 disabled:opacity-50"
                   style={{
@@ -245,7 +273,7 @@ function AlertaCard({ a, onDiagnosticoGenerated }) {
                 <div className="flex items-center justify-between mb-1">
                   <p className="text-[11px] font-bold" style={{ color: 'var(--color-accent-amber)' }}>REPORTE PARA AGRICULTOR</p>
                   <button
-                    onClick={handleCopiarReporte}
+                    onClick={(e) => { e.stopPropagation(); handleCopiarReporte() }}
                     className="flex items-center gap-1 text-xs"
                     style={{ color: 'var(--color-accent-amber)' }}
                   >
@@ -258,39 +286,39 @@ function AlertaCard({ a, onDiagnosticoGenerated }) {
                 </p>
               </div>
             )}
+
+            {/* Action buttons */}
+            <div className="flex gap-2 mt-3">
+              <button
+                onClick={(e) => { e.stopPropagation(); handleEnviarAgronomo() }}
+                disabled={!diag}
+                className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg font-medium transition-all duration-200 disabled:opacity-30"
+                style={{
+                  background: diag ? 'var(--color-accent-green-dim)' : 'var(--color-surface-3)',
+                  color: diag ? 'var(--color-accent-green)' : 'var(--color-text-muted)',
+                  border: `1px solid ${diag ? 'rgba(16,185,129,0.3)' : 'var(--color-border)'}`,
+                }}
+              >
+                {copied ? <Check size={12} /> : <Send size={12} />}
+                {copied ? 'Copiado' : 'Enviar a agrónomos asignados'}
+              </button>
+              <button
+                onClick={(e) => { e.stopPropagation(); handleGenerarReporte() }}
+                disabled={loadingReporte}
+                className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg font-medium transition-all duration-200 disabled:opacity-50"
+                style={{
+                  background: 'var(--color-glow-cyan)',
+                  color: 'var(--color-accent-cyan)',
+                  border: '1px solid rgba(34,211,238,0.2)',
+                }}
+              >
+                {loadingReporte ? <Loader2 size={12} className="animate-spin" /> : <FileText size={12} />}
+                {loadingReporte ? 'Generando...' : 'Generar reporte'}
+              </button>
+            </div>
           </div>
         </div>
-
-        {/* Action buttons */}
-        <div className="flex gap-2 mt-4 ml-14">
-          <button
-            onClick={handleEnviarSalvador}
-            disabled={!diag}
-            className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg font-medium transition-all duration-200 disabled:opacity-30"
-            style={{
-              background: diag ? 'var(--color-accent-green-dim)' : 'var(--color-surface-3)',
-              color: diag ? 'var(--color-accent-green)' : 'var(--color-text-muted)',
-              border: `1px solid ${diag ? 'rgba(16,185,129,0.3)' : 'var(--color-border)'}`,
-            }}
-          >
-            {copied ? <Check size={12} /> : <Send size={12} />}
-            {copied ? 'Copiado' : 'Enviar a Salvador'}
-          </button>
-          <button
-            onClick={handleGenerarReporte}
-            disabled={loadingReporte}
-            className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg font-medium transition-all duration-200 disabled:opacity-50"
-            style={{
-              background: 'var(--color-glow-cyan)',
-              color: 'var(--color-accent-cyan)',
-              border: '1px solid rgba(34,211,238,0.2)',
-            }}
-          >
-            {loadingReporte ? <Loader2 size={12} className="animate-spin" /> : <FileText size={12} />}
-            {loadingReporte ? 'Generando...' : 'Generar reporte'}
-          </button>
-        </div>
-      </div>
+      )}
     </div>
   )
 }
