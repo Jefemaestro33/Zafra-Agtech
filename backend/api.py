@@ -18,7 +18,7 @@ from pathlib import Path
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel
 
 import psycopg2
@@ -156,6 +156,36 @@ def listar_predios():
             }
         ]
     return serialize(rows)
+
+
+@app.post("/api/predios")
+def crear_predio(datos: dict):
+    """Crea un nuevo predio."""
+    required = ["nombre", "cultivo", "hectareas", "municipio"]
+    for field in required:
+        if field not in datos or not str(datos[field]).strip():
+            return JSONResponse(status_code=400, content={"error": f"Campo obligatorio: {field}"})
+
+    campos = ["nombre", "cultivo", "tipo_suelo", "hectareas", "municipio", "fecha_instalacion", "lat", "lon"]
+    values_dict = {k: datos.get(k) for k in campos if k in datos}
+
+    cols = ", ".join(values_dict.keys())
+    placeholders = ", ".join(["%s"] * len(values_dict))
+    values = list(values_dict.values())
+
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            try:
+                cur.execute(
+                    f"INSERT INTO predios ({cols}) VALUES ({placeholders}) RETURNING predio_id",
+                    values,
+                )
+                predio_id = cur.fetchone()[0]
+                conn.commit()
+                return {"ok": True, "predio_id": predio_id, "nombre": datos["nombre"]}
+            except Exception as e:
+                conn.rollback()
+                return JSONResponse(status_code=500, content={"error": str(e)})
 
 
 @app.put("/api/predios/{predio_id}")
