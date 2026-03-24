@@ -137,8 +137,8 @@ export default function App() {
         {/* Sidebar */}
         <aside
           className={`
-            shrink-0 overflow-y-auto overflow-x-hidden scrollbar-none z-40 flex flex-col
-            fixed lg:sticky inset-y-0 left-0 top-12 lg:top-12 lg:h-[calc(100vh-48px)]
+            shrink-0 overflow-y-auto overflow-x-hidden scrollbar-none z-40
+            fixed inset-y-0 left-0 top-12
             transform transition-all duration-200 ease-out
             ${mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
           `}
@@ -323,7 +323,7 @@ export default function App() {
         </aside>
 
         {/* Main */}
-        <main className="flex-1 overflow-y-auto">
+        <main className={`flex-1 overflow-y-auto ${collapsed ? 'lg:ml-[60px]' : 'lg:ml-[220px]'} transition-all duration-200`}>
           <div className="max-w-[1400px] mx-auto px-4 sm:px-6 py-6">
             <Routes>
               <Route path="/" element={<OverviewView predioId={predioId} />} />
