@@ -158,6 +158,25 @@ def listar_predios():
     return serialize(rows)
 
 
+@app.put("/api/predios/{predio_id}")
+def actualizar_predio(predio_id: int, datos: dict):
+    """Actualiza campos editables del predio."""
+    campos_permitidos = ["nombre", "cultivo", "tipo_suelo", "hectareas", "municipio", "fecha_instalacion"]
+
+    updates = {k: v for k, v in datos.items() if k in campos_permitidos}
+    if not updates:
+        raise HTTPException(400, "No se proporcionaron campos válidos")
+
+    set_clause = ", ".join([f"{k} = %s" for k in updates.keys()])
+    values = list(updates.values()) + [predio_id]
+
+    try:
+        execute(f"UPDATE predios SET {set_clause} WHERE predio_id = %s", values)
+        return {"ok": True, "updated": updates}
+    except Exception as e:
+        raise HTTPException(500, f"Error al actualizar: {e}")
+
+
 @app.get("/api/predios/{predio_id}/overview")
 def overview_predio(predio_id: int):
     predio = query("SELECT * FROM predios WHERE predio_id = %s", (predio_id,), one=True)

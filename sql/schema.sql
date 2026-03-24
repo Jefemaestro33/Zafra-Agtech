@@ -1,6 +1,6 @@
 -- ============================================================
 -- SCHEMA — AgTech Sistema
--- 6 tablas para el sistema de monitoreo IoT + IA
+-- 8 tablas para el sistema de monitoreo IoT + IA
 -- Compatible con PostgreSQL estándar (Railway)
 -- FUTURO: agregar create_hypertable() cuando se migre a TimescaleDB
 -- ============================================================
@@ -12,6 +12,24 @@ DROP TABLE IF EXISTS microbioma CASCADE;
 DROP TABLE IF EXISTS tratamientos CASCADE;
 DROP TABLE IF EXISTS lecturas CASCADE;
 DROP TABLE IF EXISTS nodos CASCADE;
+DROP TABLE IF EXISTS predios CASCADE;
+
+-- ============================================================
+-- 0. PREDIOS — Metadata de cada predio/parcela
+-- ============================================================
+CREATE TABLE predios (
+    predio_id     SERIAL PRIMARY KEY,
+    nombre        VARCHAR(100) NOT NULL,
+    ubicacion     VARCHAR(200),
+    municipio     VARCHAR(100),
+    hectareas     REAL,
+    tipo_suelo    VARCHAR(100),
+    cultivo       VARCHAR(100),
+    lat           REAL,
+    lon           REAL,
+    fecha_instalacion DATE,
+    notas         TEXT
+);
 
 -- ============================================================
 -- 1. NODOS — Metadata de cada sensor
@@ -146,6 +164,13 @@ CREATE INDEX idx_clima_tiempo ON clima (tiempo DESC);
 
 -- FUTURO (TimescaleDB): descomentar para hypertable
 -- SELECT create_hypertable('clima', 'tiempo');
+
+-- ============================================================
+-- MIGRATIONS — safe to run on existing production DB
+-- ============================================================
+-- Add columns if missing (idempotent)
+ALTER TABLE predios ADD COLUMN IF NOT EXISTS municipio VARCHAR(100);
+ALTER TABLE predios ADD COLUMN IF NOT EXISTS fecha_instalacion DATE;
 
 -- ============================================================
 -- Verificación
