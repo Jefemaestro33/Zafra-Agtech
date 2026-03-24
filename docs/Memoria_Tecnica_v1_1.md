@@ -1,17 +1,17 @@
-# MEMORIA TÉCNICA — PROYECTO AGTECH NEXTIPAC
+# MEMORIA TÉCNICA — PROYECTO AGTECH
 
 ## Sistema de Monitoreo IoT + IA para Aguacate Hass
 
-**Versión 1.0** — 22 de marzo de 2026
+**Versión 1.1** — 23 de marzo de 2026
 Guadalajara, Jalisco
 
 ---
 
 ## 1. RESUMEN EJECUTIVO
 
-AgTech Nextipac es un sistema de agricultura inteligente que combina sensores IoT enterrados en el suelo, datos climáticos en tiempo real, machine learning, y un agente de IA (Claude) para optimizar riego, prevenir Phytophthora cinnamomi y monitorear el microbioma del suelo en huertas de aguacate Hass en Nextipac, Jalisco.
+AgTech es un sistema de agricultura inteligente que combina sensores IoT enterrados en el suelo, datos climáticos en tiempo real, machine learning, y un agente de IA (Claude) para optimizar riego, prevenir Phytophthora cinnamomi y monitorear el microbioma del suelo en huertas de aguacate Hass en Nextipac, Jalisco.
 
-El sistema resuelve un problema concreto: los productores de aguacate pierden entre 15-30% de su producción anual por Phytophthora cinnamomi, un oomiceto que pudre las raíces cuando el suelo está saturado de agua. La detección convencional (visual) llega tarde — cuando los síntomas aparecen en las hojas, el árbol ya tiene daño radicular severo. AgTech Nextipac detecta las condiciones de riesgo en el suelo antes de que la planta manifieste síntomas, permitiendo intervención preventiva.
+El sistema resuelve un problema concreto: los productores de aguacate pierden entre 15-30% de su producción anual por Phytophthora cinnamomi, un oomiceto que pudre las raíces cuando el suelo está saturado de agua. La detección convencional (visual) llega tarde — cuando los síntomas aparecen en las hojas, el árbol ya tiene daño radicular severo. AgTech detecta las condiciones de riesgo en el suelo antes de que la planta manifieste síntomas, permitiendo intervención preventiva.
 
 **Diferenciadores vs competencia (CropX, SupPlant, NXTAgro):**
 - Datos pareados sensor-microbioma (qPCR + IoT) — nadie más los tiene
@@ -20,7 +20,7 @@ El sistema resuelve un problema concreto: los productores de aguacate pierden en
 - Agrónomo en campo (Salvador) que traduce datos en acciones — no vendemos cajas
 - Stack de IA completo: sensores → firma hídrica → CUSUM → ML → LLM con diagnósticos
 
-**Estado actual:** Sistema completo funcionando en producción con datos sintéticos (416K registros). Deploy público en Railway. Dashboard accesible desde cualquier dispositivo. Pendiente: hardware en campo y datos reales (estimado junio 2026 con financiamiento UP).
+**Estado actual:** Sistema completo funcionando en producción con datos sintéticos (416K registros) + 6 alertas de ejemplo. Deploy público en Railway. Dashboard dark premium accesible desde cualquier dispositivo con sidebar colapsable, 10 vistas funcionales + 6 placeholders, consultor IA interactivo, sistema de alertas con desglose visual y diagnósticos Claude, y CRUD completo de predios. Pendiente: hardware en campo y datos reales (estimado junio 2026 con financiamiento UP).
 
 ### Modelo de negocio
 
@@ -31,13 +31,13 @@ El sistema resuelve un problema concreto: los productores de aguacate pierden en
 
 ---
 
-## 2. ESTADO ACTUAL — Lo que está construido y funcionando (22 marzo 2026)
+## 2. ESTADO ACTUAL — Lo que está construido y funcionando (23 marzo 2026)
 
 ### 2.1 Backend Python (7 módulos, ~3,500 líneas)
 
 | Módulo | Líneas | Función | Estado |
 |--------|--------|---------|--------|
-| `api.py` | ~700 | FastAPI con 24 endpoints REST, CORS, sirve dashboard estático | ✓ Producción |
+| `api.py` | ~750 | FastAPI con 26 endpoints REST (incluyendo CRUD de predios), CORS, sirve dashboard estático | ✓ Producción |
 | `alertas.py` | ~690 | Score Phytophthora v2 (7 factores), alerta riego/offline/batería, `generar_resumen_nodo()` | ✓ Producción |
 | `clima.py` | ~310 | Open-Meteo API → ETo Penman-Monteith, backfill histórico, modo daemon | ✓ Producción |
 | `llm_consultor.py` | ~470 | Claude Sonnet API con httpx, 6 prompts especializados, diagnósticos + reportes | ✓ Producción |
@@ -45,68 +45,76 @@ El sistema resuelve un problema concreto: los productores de aguacate pierden en
 | `comparativo.py` | ~280 | CUSUM tratamiento vs testigo, medias diarias, análisis por bloque | ✓ Producción |
 | `modelo_microbioma.py` | ~350 | Random Forest (14 features → 5 targets), LOO-CV, predicción on-demand | ✓ Producción |
 
-### 2.2 Dashboard React (10 vistas + 6 placeholders, 4 componentes, ~3,409 líneas JSX/JS/CSS)
+### 2.2 Dashboard React (10 vistas funcionales + 6 placeholders, 4 componentes base, ~3,409 líneas JSX/JS/CSS)
 
-| Vista | Ruta | Contenido |
-|-------|------|-----------|
-| Predio | `/predio` | Info del predio editable (inline edit + confirm modal) + selector + agrónomos asignados + notas localStorage + estado sistema |
-| Overview | `/` | 4 KPIs + mapa Leaflet satelital (Esri) con 8 nodos coloreados por score + tabla clickeable |
-| Nodo detalle | `/nodo/:id` | 6 métricas + 3 gráficas Recharts (humedad 3 prof., temp+EC, h10 7d) + desglose score |
-| Firma hídrica | `/firma` | 3 KPIs + gráfica evolución τ10 por nodo (trat vs testigo) + tabla historial 654 firmas |
-| Comparativo | `/comparativo` | Selector período + LineChart trat vs testigo por bloque + CUSUM (S+/S-) + badge divergencia |
-| Clima | `/clima` | 4 KPIs datos reales Nextipac + barras precip + línea temp + área ETo |
-| Alertas | `/alertas` | 3 filtros (todas/destacadas/borradas), alertas colapsables con: score desglose visual (barras), "Explícame esta alerta" (lógica paso a paso), timeline del evento, sparkline h10 48h, diagnóstico IA (Claude), reporte agricultor, enviar a agrónomos, destacar con razón, papelera/restaurar |
-| Consultor | `/consultor` | Chat con IA, selector de sección (Overview/Nodo/Firma/Comparativo/Clima), contexto automático de datos reales, historial de mensajes |
-| Nuevo predio | `/nuevo-predio` | Formulario completo para crear predios con validación + POST al backend |
-| Próximamente | varias | Placeholder con badge "Próximamente" para: Agrónomos, Usuarios, Historial, Exportar datos, Contabilidad, Finanzas |
+| Vista | Ruta | Contenido | Estado |
+|-------|------|-----------|--------|
+| Predio | `/predio` | Info del predio editable (inline edit + confirm modal) + selector de predio + agrónomos asignados + notas (localStorage) + estado del sistema | ✓ Funcional |
+| Overview | `/` | 4 KPIs + mapa Leaflet satelital (Esri) con 8 nodos coloreados por score + tabla clickeable con colores semánticos | ✓ Funcional |
+| Nodo detalle | `/nodo/:id` | 6 métricas + 3 gráficas Recharts (humedad 3 prof. con gradientes SVG, temp+EC, h10 7d) + desglose score | ✓ Funcional |
+| Firma hídrica | `/firma` | 3 KPIs + gráfica evolución τ10 por nodo (trat vs testigo, sólidas vs punteadas) + tabla historial 654 firmas | ✓ Funcional |
+| Comparativo | `/comparativo` | Selector período (7/14/30/90/180d) + LineChart trat vs testigo por bloque + CUSUM (S+/S-) + badge divergencia | ✓ Funcional |
+| Clima | `/clima` | 4 KPIs datos reales Nextipac (Open-Meteo) + barras precipitación + línea temp + área ETo con gradiente | ✓ Funcional |
+| Alertas | `/alertas` | 3 sub-rutas (todas/destacadas/borradas). Alertas colapsables con: desglose visual del score (barras por factor), botón "Explícame esta alerta" (lógica paso a paso con semáforo), timeline del evento, sparkline h10 últimas 48h, diagnóstico IA (Claude Sonnet), reporte para agricultor, enviar a agrónomos asignados (clipboard), destacar con razón (modal), mover a papelera/restaurar | ✓ Funcional |
+| Consultor | `/consultor` | Chat interactivo con IA. Selector de sección (Overview/Nodo/Firma/Comparativo/Clima) como botones toggle. Inyecta datos reales del predio como contexto. Historial de mensajes con bubbles (usuario/IA). Botón limpiar chat | ✓ Funcional |
+| Nuevo predio | `/nuevo-predio` | Formulario completo con 8 campos (nombre, cultivo, tipo suelo, hectáreas, ubicación, fecha instalación, lat, lon), validación inline, POST al backend, banner de éxito/error, botón "Ir al predio" | ✓ Funcional |
+| Placeholders | varias | Vista con badge "Próximamente" para: Agrónomos, Usuarios, Historial, Exportar datos, Contabilidad, Finanzas | Placeholder |
 
 **Componentes base (4):**
-- `KpiCard` — trend indicator, Lucide icons, glow backgrounds
-- `ScoreBadge` — Shield icons por nivel, pulse en CRÍTICO
-- `Loading` — Skeleton loaders dark-themed
-- `EmptyState` — Icono centrado dark con descripción
+- `KpiCard` — trend indicator opcional, Lucide icons o emojis, glow backgrounds por color, hover lift
+- `ScoreBadge` — Shield icons por nivel (ShieldCheck/Shield/ShieldAlert/ShieldX), pulse animation en CRÍTICO
+- `Loading` — Skeleton loaders dark-themed (KPIs + chart + tabla)
+- `EmptyState` — Contenedor dark con icono centrado (Lucide o string) + título + descripción
 
 **Layout:**
 - Sidebar colapsable (220px expandido → 60px icon rail) con toggle ChevronsLeft/Right
-- Sidebar fijo al viewport, independiente del scroll del contenido
-- Sección "Administrador" separada en sidebar (Nuevo predio, Agrónomos, Usuarios, Historial, Exportar, Contabilidad, Finanzas)
-- Header fijo 48px (logo AgTech + campana notificaciones con badge)
-- Menú desplegable de perfil desde sidebar bottom: Config alertas, Notificaciones, Integraciones, Respaldos, Tema oscuro/claro, Documentación, Cerrar sesión
-- Sub-menú desplegable en Alertas (Todas, Destacadas, Borradas)
-- Mobile: hamburger + drawer con overlay oscuro
+- Sidebar y header fijos al viewport (position: fixed), independientes del scroll del contenido principal
+- Main content con margin-top (48px header) y margin-left dinámico según estado del sidebar
+- Sección "Administrador" separada visualmente en sidebar con divider + título uppercase (Nuevo predio, Agrónomos, Usuarios, Historial, Exportar, Contabilidad, Finanzas)
+- Header fijo 48px con logo AgTech (Leaf icon + texto) + campana de notificaciones con badge contador
+- Perfil de usuario al fondo del sidebar (mt-auto) con botón que despliega menú hacia arriba
+- Menú desplegable de perfil con secciones: Configuración (alertas, notificaciones, integraciones, respaldos), Preferencias (tema oscuro/claro, documentación), Cerrar sesión
+- Sub-menú desplegable en Alertas: Todas, Destacadas (★), Borradas (papelera)
+- Mobile: botón hamburger/X en header, sidebar como drawer con overlay oscuro
 
-**Características técnicas:**
-- Dark premium theme con 25+ CSS custom properties (surfaces, accents, glows, borders, text)
-- Tipografía: Plus Jakarta Sans (UI) + JetBrains Mono (datos numéricos) vía Google Fonts
-- Iconografía: Lucide React (reemplazó todos los emojis por íconos SVG)
-- Staggered fade-in animations al cargar vistas
-- Card-glow hover effects, pulse-critical en alertas Phytophthora
-- Custom dark tooltips en todas las gráficas Recharts con SVG gradients
-- Colores semánticos: cyan=humedad, amber=temperatura, verde=tratamiento, gris=testigo
-- Leaflet dark mode overrides (popups, controles, background)
-- Mapa satelital Esri World Imagery con toggle a OpenStreetMap
-- Auto-refresh silencioso cada 30 segundos
-- Mobile responsive con skeleton loaders dark-themed
-- Favicon 🌿, Open Graph para preview en WhatsApp
+**Sistema de diseño (dark premium theme):**
+- 25+ CSS custom properties en `index.css` organizadas por categoría:
+  - Surfaces: `--color-surface-0` (fondo más oscuro #0a0c10) hasta `--color-surface-4` (#262b3a)
+  - Borders: `--color-border` (#2a2f40), `--color-border-light` (#353b50)
+  - Texto: `--color-text-primary` (#f0f2f5), `--color-text-secondary` (#9ca3b4), `--color-text-muted` (#5c6378)
+  - Acentos: green (#10b981), amber (#f59e0b), red (#ef4444), cyan (#22d3ee), blue (#3b82f6), violet (#8b5cf6)
+  - Dims (backgrounds oscuros): green-dim (#065f46), amber-dim (#78350f), red-dim (#7f1d1d), etc.
+  - Glows (backgrounds sutiles semi-transparentes): glow-green (rgba 12%), glow-red, glow-amber, glow-cyan
+- Tipografía: Plus Jakarta Sans (UI) + JetBrains Mono (datos numéricos, font-mono) vía Google Fonts
+- Iconografía: Lucide React v0.577 — todos los emojis originales reemplazados por íconos SVG
+- Animaciones: staggered fade-in (`animate-in` + `stagger-1` a `stagger-6`), card-glow hover (translateY + box-shadow), pulse-critical (2.5s ease-in-out infinite para alertas Phytophthora)
+- Custom dark tooltips en todas las gráficas Recharts con componente CustomTooltip reutilizable
+- SVG `<linearGradient>` en todos los area charts (humedad, ETo, sparklines)
+- Colores semánticos consistentes: cyan = humedad, amber = temperatura, naranja = EC, verde = tratamiento/positivo, gris = testigo, rojo = alerta/peligro, violet = tiempo
+- Leaflet dark mode overrides en CSS global: popups, tip, controles zoom, background del contenedor
+- Recharts dark overrides: tooltip background, grid lines, axis text con CSS global
 
 ### 2.3 Base de datos PostgreSQL (Railway)
 
 | Tabla | Registros | Contenido |
 |-------|-----------|-----------|
-| lecturas | 416,592 | Datos de sensores cada 5 min, 8 nodos, 6 meses (ene-jun 2026) |
+| lecturas | 416,592 | Datos de sensores cada 5 min, 8 nodos, 6 meses (ene-jun 2026) — sintéticos |
 | firma_hidrica | 654 | Firma hídrica calculada por evento de riego (τ, vel, BP) |
 | microbioma | 560 | qPCR quincenal pareado con sensores (5 targets × 8 nodos × 14 fechas) |
 | clima | 2,160 | Datos meteorológicos reales de Nextipac (dic 2025 - mar 2026, Open-Meteo) |
 | nodos | 8 | Metadata: 4 bloques, 4 tratamiento + 4 testigo |
 | tratamientos | 24 | Aplicaciones de micorriza y Trichoderma simuladas |
-| predios | 1 | Nextipac Piloto, 4 ha, andisol volcánico |
-| eventos | 6 | Alertas de ejemplo: 2 Phytophthora, 2 riego, 1 offline, 1 batería |
+| predios | 1+ | Nextipac Piloto, 4 ha, andisol volcánico (editable, con columnas municipio + fecha_instalacion) |
+| eventos | 6 | Alertas de ejemplo: 2 Phytophthora (CRÍTICO + ALTO), 2 riego, 1 offline, 1 batería |
 
 ### 2.4 Inteligencia Artificial
 
 **Claude Sonnet (Anthropic API):**
 - 6 prompts especializados en `backend/prompts/`: phytophthora, firma_hidrica, bioinsumos, reporte_semanal, diagnostico_visual, reporte_agricultor
 - Diagnósticos con formato: DIAGNÓSTICO → RECOMENDACIÓN 1 → RECOMENDACIÓN 2 → REFERENCIA
+- Integrado en 2 vistas del dashboard:
+  - Alertas: genera diagnósticos por alerta individual (POST `/api/alertas/{id}/diagnostico`)
+  - Consultor: chat interactivo con contexto automático de la sección seleccionada
 - Retry 3× con backoff exponencial, fallback si API no responde
 - Costo estimado: ~$0.45 USD/mes (60 consultas × ~500 tokens)
 
@@ -177,19 +185,21 @@ ESP32/TTGO ──LoRa──→ Gateway RAK
               ┌──────────────────┐
               │   api.py         │
               │   FastAPI        │
-              │   24 endpoints   │
+              │   26 endpoints   │
               └────────┬─────────┘
                        │
                        ▼
-              ┌──────────────────┐
-              │   Dashboard      │
-              │   React + Vite   │
-              │   6 vistas       │
-              │   Mapa Leaflet   │
-              └──────────────────┘
+              ┌──────────────────────────────┐
+              │   Dashboard React + Vite     │
+              │   10 vistas + 6 placeholders │
+              │   Sidebar colapsable         │
+              │   Dark premium theme         │
+              │   Mapa Leaflet + Recharts    │
+              │   Consultor IA (chat)        │
+              └──────────────────────────────┘
                        │
                        ▼
-              Salvador (agrónomo en campo)
+              Agrónomos asignados (Salvador)
               + Agricultor (vía WhatsApp)
 ```
 
@@ -227,7 +237,7 @@ ESP32/TTGO ──LoRa──→ Gateway RAK
 | # | Método | Endpoint | Función |
 |---|--------|----------|---------|
 | 1 | GET | `/api/predios` | Lista de predios |
-| 2 | POST | `/api/predios` | Crear nuevo predio |
+| 2 | POST | `/api/predios` | Crear nuevo predio (nombre, cultivo, tipo_suelo, hectareas, municipio, fecha_instalacion, lat, lon) |
 | 3 | PUT | `/api/predios/{id}` | Actualizar campos del predio (nombre, cultivo, tipo_suelo, hectareas, municipio, fecha_instalacion) |
 | 4 | GET | `/api/predios/{id}/overview` | 4 KPIs + 8 nodos con score |
 | 5 | GET | `/api/predios/{id}/nodos` | Nodos con status, score, batería |
@@ -281,6 +291,11 @@ Basado en literatura: P. cinnamomi necesita suelo húmedo + temperatura 15-28°C
 
 Clasificación: 0-25 BAJO, 26-50 MODERADO, 51-75 ALTO, 76-100 CRÍTICO.
 
+El dashboard muestra este score de 3 formas interactivas:
+1. **Desglose visual** — barras horizontales por factor con color semántico (rojo/ámbar/verde) y puntos aportados
+2. **"Explícame esta alerta"** — explicación paso a paso en lenguaje natural con semáforo por factor y razonamiento causal
+3. **Timeline** — cronología del evento mostrando cómo se acumularon las condiciones de riesgo
+
 ### 6.2 Firma hídrica
 
 Se calcula automáticamente para cada evento de mojado detectado (Δh10 > 3% VWC en 5 minutos):
@@ -323,6 +338,8 @@ Se corre sobre la serie diaria de Δ(tratamiento - testigo) para h10 y τ10.
 | reporte_semanal.txt | Lunes automático | Resumen ejecutivo 300 palabras |
 | diagnostico_visual.txt | Foto de hoja | Cruce visual + sensores → diagnóstico integrado |
 | reporte_agricultor.txt | Bajo demanda | Mensaje WhatsApp 5 oraciones sin tecnicismos |
+
+Adicionalmente, el **Consultor IA** (chat interactivo) inyecta datos reales de la sección seleccionada como contexto y permite preguntas libres.
 
 ---
 
@@ -383,27 +400,52 @@ Detalle completo en `docs/Presupuesto_Piloto_Nextipac.xlsx`.
 
 ---
 
-## 9. ROADMAP — Lo que falta
+## 9. ROADMAP
 
-### Inmediato (con financiamiento, junio 2026)
+### ✅ Completado (22-23 marzo 2026)
+- Sistema completo de backend: 7 módulos Python, 26 endpoints, 8 tablas
+- Dashboard React dark premium: 10 vistas funcionales + 6 placeholders
+- Sidebar colapsable con icon rail + menú de perfil
+- Sistema de alertas interactivo: desglose visual, explícame, timeline, sparklines, destacar/borrar
+- Consultor IA con chat por sección
+- CRUD de predios (crear, editar, notas)
+- Firmware ESP32 listo para flashear
+- Deploy en Railway con auto-deploy desde GitHub
+
+### 🔧 Próximo — Dashboard (secciones placeholder por construir)
+- Gestión de agrónomos (agregar, quitar, asignar a predios)
+- Gestión de usuarios (accesos, roles: admin/agrónomo/observador)
+- Historial de actividad (quién hizo qué y cuándo)
+- Exportar datos (CSV de lecturas/alertas, PDF de reportes)
+- Contabilidad y Finanzas (tracking de costos operativos)
+- Configuración de alertas (umbrales personalizables)
+- Configuración de notificaciones (email, WhatsApp, canales)
+- Integraciones (API Keys, webhooks, Telegram bot)
+- Respaldos de base de datos
+- Autenticación de usuarios (login, roles, permisos)
+- Tema claro (toggle, actualmente solo dark)
+
+### 🚀 Inmediato — Hardware (con financiamiento, junio 2026)
 1. Comprar hardware: 8 TTGO T-Beam + sensores + gateway RAK ($21,520 MXN)
 2. Flashear firmware (ya escrito) y desplegar nodos en Nextipac
 3. Configurar gateway con SIM 4G → MQTT → PostgreSQL
-4. Primer muestreo de laboratorio (qPCR) y calibración de sensores
+4. Implementar ingesta.py para datos reales por MQTT
+5. Primer muestreo de laboratorio (qPCR) y calibración de sensores
 
-### Corto plazo (meses 1-6 del piloto)
-5. Acumular 50+ pares sensor-microbioma para reentrenar Random Forest con datos reales
-6. Migrar de Railway a VPS propio con Docker ($6 USD/mes vs $25-35)
-7. Agregar ingesta.py para datos reales por MQTT
+### 📊 Corto plazo (meses 1-6 del piloto)
+6. Acumular 50+ pares sensor-microbioma para reentrenar Random Forest con datos reales
+7. Migrar de Railway a VPS propio con Docker ($6 USD/mes vs $25-35)
+8. Pipeline automático: alertas → diagnóstico Claude → notificación WhatsApp/email/dashboard
+9. Correr alertas.py como cronjob contra datos reales
 
-### Mediano plazo (meses 6-18)
-8. Modelo RF real con R² > 0.5
-9. Landing page para demostrar a nuevos productores
-10. Segundo predio piloto para validar el modelo en otro tipo de suelo
-11. Reporte automático semanal por WhatsApp
+### 🌱 Mediano plazo (meses 6-18)
+10. Modelo RF real con R² > 0.5
+11. Landing page para demostrar a nuevos productores
+12. Segundo predio piloto para validar el modelo en otro tipo de suelo
+13. Reporte automático semanal por WhatsApp
 
-### Funcionalidades diseñadas pero no implementadas
-- Diagnóstico visual (foto de hoja → Claude Vision + sensores)
+### 💡 Funcionalidades diseñadas pero no implementadas
+- Diagnóstico visual (foto de hoja → Claude Vision + datos de sensores)
 - Cálculo de huella hídrica (litros agua / kg aguacate)
 - Automatización de riego (requiere infraestructura de electroválvulas)
 
@@ -413,8 +455,8 @@ Detalle completo en `docs/Presupuesto_Piloto_Nextipac.xlsx`.
 
 | Persona | Rol | Responsabilidad |
 |---------|-----|-----------------|
-| Ernest Darell Plascencia | Co-fundador, ingeniería | Desarrollo de software, IA, datos, deploy |
-| Salvador | Co-fundador, agronomía de campo | Relación con productores, muestreo, aplicación de bioinsumos, interpretación agronómica |
+| Ernest Darell Plascencia | Co-fundador, ingeniería | Desarrollo de software, IA, datos, deploy, administrador del sistema |
+| Salvador Jayat | Co-fundador, agronomía de campo | Relación con productores, muestreo, aplicación de bioinsumos, interpretación agronómica |
 | CUCBA (UdeG) | Laboratorio | Análisis molecular (qPCR, 16S, ITS), análisis fisicoquímico de suelo |
 
 ---
@@ -423,13 +465,14 @@ Detalle completo en `docs/Presupuesto_Piloto_Nextipac.xlsx`.
 
 | Métrica | Valor |
 |---------|-------|
-| Líneas de código | 9,915 |
+| Líneas de código | ~9,915 |
 | Archivos de código | ~35 |
 | Endpoints API | 26 |
+| Vistas dashboard | 10 funcionales + 6 placeholders |
 | Tablas PostgreSQL | 8 |
 | Registros en DB | 420,000+ |
-| Commits en GitHub | 31 |
-| Tiempo de desarrollo | 2 días (22-23 marzo 2026, incluye rediseño UI dark theme + sistema completo de alertas interactivas + consultor IA + CRUD predios) |
+| Commits en GitHub | 31+ |
+| Tiempo de desarrollo | 2 días (22-23 marzo 2026) |
 | Costo de desarrollo | $0 (herramientas gratuitas + Claude Code) |
 | Costo operativo mensual | ~$11 USD |
 
@@ -444,6 +487,7 @@ Detalle completo en `docs/Presupuesto_Piloto_Nextipac.xlsx`.
 | Guía técnica de laboratorio | `docs/Analisis_Laboratorio_Guia_Tecnica.md.pdf` |
 | Proyección financiera y mercado | `docs/Analisis_Mercado_Proyeccion_Financiera.md.pdf` |
 | Presupuesto del piloto | `docs/Presupuesto_Piloto_Nextipac.xlsx` |
+| Guía de estilo frontend | `docs/FRONTEND_STYLE_GUIDE.md` |
 
 ---
 
@@ -457,6 +501,6 @@ Detalle completo en `docs/Presupuesto_Piloto_Nextipac.xlsx`.
 
 ---
 
-*Documento generado el 22 de marzo de 2026.*
-*AgTech Sistema v1.0 — Sistema completo construido, probado y deployado en producción.*
+*Documento actualizado el 23 de marzo de 2026.*
+*AgTech v1.1 — Sistema completo con dashboard dark premium, alertas interactivas, consultor IA, y CRUD de predios.*
 *Pendiente: hardware en campo y datos reales (financiamiento UP, junio 2026).*
