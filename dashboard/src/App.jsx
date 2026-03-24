@@ -138,7 +138,7 @@ export default function App() {
         <aside
           className={`
             shrink-0 overflow-y-auto overflow-x-hidden scrollbar-none z-40 flex flex-col
-            fixed lg:static inset-y-0 left-0 top-12
+            fixed lg:sticky inset-y-0 left-0 top-12 lg:top-12 lg:h-[calc(100vh-48px)]
             transform transition-all duration-200 ease-out
             ${mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
           `}
