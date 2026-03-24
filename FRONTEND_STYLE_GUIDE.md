@@ -72,16 +72,59 @@
 - `CustomTooltip`: tooltip dark para Recharts (definido por vista, mismo patrón)
 
 ### Layout
-- Sidebar fijo 256px en desktop, drawer en mobile
-- Header delgado (48px) con logo + bell + avatar
+- Sidebar colapsable: 220px expandido, 60px colapsado (icon rail con ChevronsLeft/Right toggle)
+- Sidebar `fixed inset-y-0 left-0 top-12` con `flex flex-col`, perfil `mt-auto` al fondo
+- Header `fixed top-0 left-0 right-0 z-50` de 48px (logo AgTech + campana notificaciones)
+- Main con `mt-12` + `ml` dinámico según sidebar (`lg:ml-[220px]` o `lg:ml-[60px]`)
 - Contenido: `max-w-[1400px] mx-auto px-4 sm:px-6 py-6`
 - Spacing entre secciones: `space-y-6`
+- Sección "Administrador" en sidebar con divider visual + label uppercase tracking-widest
+- Sub-menú desplegable en Alertas (Todas/Destacadas/Borradas) con ChevronsRight rotado 90deg
 
 ### Mobile
 - Sidebar se convierte en drawer con overlay `rgba(0,0,0,0.5)`
 - Botón hamburger/X en header
 - Grids colapsan: `grid-cols-1 sm:grid-cols-2 lg:grid-cols-4`
 - Tablas con `overflow-x-auto` y `min-w-[700px]`
+
+### Alertas interactivas
+- `ScoreDesglose`: barras horizontales por factor con color semántico (danger=red, warning=amber, ok=green), badge `+N puntos`
+- `ExplicacionLogica`: timeline vertical con dots coloreados (3px rounded-full con boxShadow glow) + explicación paso a paso de cada factor
+- `Timeline`: eventos cronológicos del incidente con línea vertical conectora
+- `Sparkline`: AreaChart mini de 80px height con gradiente cyan, datos de últimas 48h vía `apiFetch`
+- `HighlightModal`: modal centrado para destacar alerta con textarea de razón, overlay rgba(0,0,0,0.6)
+- Cards colapsables con ChevronUp/Down, `expanded` state default false, badge "Reporte listo" cuando colapsadas y tienen contenido
+- Botones inline: "Explícame esta alerta" (toggle cyan), "Timeline del evento" (toggle violet)
+- Star para destacar (amber fill cuando activo), Trash2 para papelera (glow-red hover)
+
+### Consultor IA
+- Selector de secciones como botones toggle (no dropdown): `rounded-xl`, accent-green-dim cuando activo
+- Chat con bubbles: usuario `flex-row-reverse` con surface-3 bg, IA normal con surface-2 bg
+- Bot icon con glow-green background, User icon con surface-4
+- Loading state con `Loader2 animate-spin` + texto "Analizando datos..."
+- `buildContext()` genera contexto real desde los hooks `useApi` (overview, firma, comparativo, clima)
+- Placeholder centrado con icono grande 16x16 + texto guía
+
+### Formularios
+- Labels con `flex items-center gap-2`: icono Lucide (14px, color del campo) + texto + asterisco rojo para required
+- Inputs: `rounded-xl px-4 py-3`, surface-3 background, border cambia a accent-green on focus (via onFocus/onBlur), accent-red on error
+- Validación inline: mensajes `text-[11px]` en accent-red debajo del campo con error
+- Botón submit: accent-green-dim con Save icon, Loader2 animate-spin durante saving, `disabled:opacity-50`
+- Result banner: glow-green con CheckCircle (éxito) o glow-red con AlertTriangle (error)
+
+### Menú desplegable perfil
+- Popup `absolute bottom-full` desde el botón de perfil (sale hacia arriba)
+- Overlay invisible `fixed inset-0 z-30` para cerrar al hacer click fuera
+- Container: `rounded-2xl py-2 shadow-2xl animate-in` con surface-3 background
+- Secciones separadas con labels `text-[9px] uppercase tracking-widest`: Configuración, Preferencias
+- Items: icono (15px) + label + descripción (text-[10px] muted), hover con surface-4
+- Tema oscuro/claro con Moon/Sun icon toggle
+- Cerrar sesión en accent-red con glow-red hover
+- En modo colapsado: mismo menú pero con `width: 220` posicionado `left-1`
+
+### Vistas placeholder (ProximamenteView)
+- Layout centrado: icono grande (36px) en surface-3 rounded-2xl + título + descripción + badge "Próximamente" (glow-amber)
+- Usado para: Agrónomos, Usuarios, Historial, Exportar, Contabilidad, Finanzas, Config alertas, Notificaciones, Integraciones, Respaldos, Documentación
 
 ---
 
@@ -95,4 +138,4 @@ Ahora, agrega una nueva vista "Microbioma" al dashboard que muestre los resultad
 
 ---
 
-*Generado el 22 de marzo de 2026 — AgTech Nextipac Dashboard v2.0 (dark premium redesign)*
+*Actualizado el 23 de marzo de 2026 — AgTech Dashboard v3.0 (sidebar layout + alertas interactivas + consultor IA + CRUD predios)*

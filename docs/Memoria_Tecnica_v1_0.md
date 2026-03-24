@@ -45,32 +45,49 @@ El sistema resuelve un problema concreto: los productores de aguacate pierden en
 | `comparativo.py` | ~280 | CUSUM tratamiento vs testigo, medias diarias, análisis por bloque | ✓ Producción |
 | `modelo_microbioma.py` | ~350 | Random Forest (14 features → 5 targets), LOO-CV, predicción on-demand | ✓ Producción |
 
-### 2.2 Dashboard React (6 vistas, 4 componentes, ~2,010 líneas JSX/JS/CSS)
+### 2.2 Dashboard React (10 vistas + 6 placeholders, 4 componentes, ~3,409 líneas JSX/JS/CSS)
 
 | Vista | Ruta | Contenido |
 |-------|------|-----------|
+| Predio | `/predio` | Info del predio editable (inline edit + confirm modal) + selector + agrónomos asignados + notas localStorage + estado sistema |
 | Overview | `/` | 4 KPIs + mapa Leaflet satelital (Esri) con 8 nodos coloreados por score + tabla clickeable |
 | Nodo detalle | `/nodo/:id` | 6 métricas + 3 gráficas Recharts (humedad 3 prof., temp+EC, h10 7d) + desglose score |
 | Firma hídrica | `/firma` | 3 KPIs + gráfica evolución τ10 por nodo (trat vs testigo) + tabla historial 654 firmas |
-| Comparativo | `/comparativo` | LineChart trat vs testigo por bloque + gráfica CUSUM (S+/S-) + badge divergencia |
+| Comparativo | `/comparativo` | Selector período + LineChart trat vs testigo por bloque + CUSUM (S+/S-) + badge divergencia |
 | Clima | `/clima` | 4 KPIs datos reales Nextipac + barras precip + línea temp + área ETo |
-| Alertas IA | `/alertas` | Botón "Generar diagnóstico IA" → Claude → diagnóstico formateado + "Enviar a Salvador" (clipboard) |
+| Alertas | `/alertas` | 3 filtros (todas/destacadas/borradas), alertas colapsables con: score desglose visual (barras), "Explícame esta alerta" (lógica paso a paso), timeline del evento, sparkline h10 48h, diagnóstico IA (Claude), reporte agricultor, enviar a agrónomos, destacar con razón, papelera/restaurar |
+| Consultor | `/consultor` | Chat con IA, selector de sección (Overview/Nodo/Firma/Comparativo/Clima), contexto automático de datos reales, historial de mensajes |
+| Nuevo predio | `/nuevo-predio` | Formulario completo para crear predios con validación + POST al backend |
+| Próximamente | varias | Placeholder con badge "Próximamente" para: Agrónomos, Usuarios, Historial, Exportar datos, Contabilidad, Finanzas |
 
-**Características del dashboard:**
+**Componentes base (4):**
+- `KpiCard` — trend indicator, Lucide icons, glow backgrounds
+- `ScoreBadge` — Shield icons por nivel, pulse en CRÍTICO
+- `Loading` — Skeleton loaders dark-themed
+- `EmptyState` — Icono centrado dark con descripción
+
+**Layout:**
+- Sidebar colapsable (220px expandido → 60px icon rail) con toggle ChevronsLeft/Right
+- Sidebar fijo al viewport, independiente del scroll del contenido
+- Sección "Administrador" separada en sidebar (Nuevo predio, Agrónomos, Usuarios, Historial, Exportar, Contabilidad, Finanzas)
+- Header fijo 48px (logo AgTech + campana notificaciones con badge)
+- Menú desplegable de perfil desde sidebar bottom: Config alertas, Notificaciones, Integraciones, Respaldos, Tema oscuro/claro, Documentación, Cerrar sesión
+- Sub-menú desplegable en Alertas (Todas, Destacadas, Borradas)
+- Mobile: hamburger + drawer con overlay oscuro
+
+**Características técnicas:**
 - Dark premium theme con 25+ CSS custom properties (surfaces, accents, glows, borders, text)
 - Tipografía: Plus Jakarta Sans (UI) + JetBrains Mono (datos numéricos) vía Google Fonts
 - Iconografía: Lucide React (reemplazó todos los emojis por íconos SVG)
 - Staggered fade-in animations al cargar vistas
-- Card-glow hover effects en tarjetas KPI
-- Pulse animation en alertas críticas de Phytophthora
-- Custom dark tooltips en todas las gráficas Recharts
-- SVG gradients en area charts con colores semánticos (cyan=humedad, amber=temperatura, verde=tratamiento, gris=testigo)
+- Card-glow hover effects, pulse-critical en alertas Phytophthora
+- Custom dark tooltips en todas las gráficas Recharts con SVG gradients
+- Colores semánticos: cyan=humedad, amber=temperatura, verde=tratamiento, gris=testigo
 - Leaflet dark mode overrides (popups, controles, background)
 - Mapa satelital Esri World Imagery con toggle a OpenStreetMap
 - Auto-refresh silencioso cada 30 segundos
-- Mobile responsive con skeleton loaders dark-themed (tabs scrollables, grids colapsables, tablas con scroll horizontal)
+- Mobile responsive con skeleton loaders dark-themed
 - Favicon 🌿, Open Graph para preview en WhatsApp
-- Topbar dark de 2 filas (logo + selector de predio + tabs)
 
 ### 2.3 Base de datos PostgreSQL (Railway)
 
@@ -83,7 +100,7 @@ El sistema resuelve un problema concreto: los productores de aguacate pierden en
 | nodos | 8 | Metadata: 4 bloques, 4 tratamiento + 4 testigo |
 | tratamientos | 24 | Aplicaciones de micorriza y Trichoderma simuladas |
 | predios | 1 | Nextipac Piloto, 4 ha, andisol volcánico |
-| eventos | 0 | Se llena cuando se generan alertas (tabla lista) |
+| eventos | 6 | Alertas de ejemplo: 2 Phytophthora, 2 riego, 1 offline, 1 batería |
 
 ### 2.4 Inteligencia Artificial
 
@@ -205,34 +222,36 @@ ESP32/TTGO ──LoRa──→ Gateway RAK
 
 ---
 
-## 5. ENDPOINTS API (24 total)
+## 5. ENDPOINTS API (26 total)
 
 | # | Método | Endpoint | Función |
 |---|--------|----------|---------|
 | 1 | GET | `/api/predios` | Lista de predios |
-| 2 | GET | `/api/predios/{id}/overview` | 4 KPIs + 8 nodos con score |
-| 3 | GET | `/api/predios/{id}/nodos` | Nodos con status, score, batería |
-| 4 | GET | `/api/predios/{id}/firma` | Firmas hídricas de todos los nodos |
-| 5 | GET | `/api/predios/{id}/comparativo` | Media diaria trat vs testigo + CUSUM |
-| 6 | POST | `/api/predios/{id}/cusum` | Análisis CUSUM detallado |
-| 7 | GET | `/api/predios/{id}/alertas` | Eventos/alertas recientes |
-| 8 | GET | `/api/nodos/{id}` | Detalle completo: score desglosado, tendencia, clima, microbioma |
-| 9 | GET | `/api/nodos/{id}/lecturas` | Serie de tiempo (5min, 1h, 1d) |
-| 10 | GET | `/api/nodos/{id}/firma` | Últimas 20 firmas de un nodo |
-| 11 | GET | `/api/nodos/{id}/alertas` | Alertas de un nodo |
-| 12 | GET | `/api/clima/actual` | Última lectura + ETo del día |
-| 13 | GET | `/api/clima/historico` | Serie clima (configurable días) |
-| 14 | GET | `/api/clima/pronostico` | Próximos 7 días |
-| 15 | GET | `/api/microbioma/nodo/{id}` | Últimos registros de lab |
-| 16 | GET | `/api/microbioma/modelo` | Métricas del modelo ML (R², MAE, features) |
-| 17 | POST | `/api/microbioma/predecir/{id}` | Predicción ML del microbioma |
-| 18 | POST | `/api/alertas/{id}/diagnostico` | Genera diagnóstico IA con Claude |
-| 19 | POST | `/api/reportes/semanal` | Reporte técnico semanal |
-| 20 | POST | `/api/reportes/agricultor` | Reporte WhatsApp para agricultor |
-| 21 | POST | `/api/diagnostico/visual` | Foto + sensores → Claude Vision |
-| 22 | POST | `/api/tratamientos` | Registrar aplicación de bioinsumo |
-| 23 | POST | `/api/microbioma` | Registrar qPCR con snapshot sensores |
-| 24 | GET | `/api/health` | Status del sistema |
+| 2 | POST | `/api/predios` | Crear nuevo predio |
+| 3 | PUT | `/api/predios/{id}` | Actualizar campos del predio (nombre, cultivo, tipo_suelo, hectareas, municipio, fecha_instalacion) |
+| 4 | GET | `/api/predios/{id}/overview` | 4 KPIs + 8 nodos con score |
+| 5 | GET | `/api/predios/{id}/nodos` | Nodos con status, score, batería |
+| 6 | GET | `/api/predios/{id}/firma` | Firmas hídricas de todos los nodos |
+| 7 | GET | `/api/predios/{id}/comparativo` | Media diaria trat vs testigo + CUSUM |
+| 8 | POST | `/api/predios/{id}/cusum` | Análisis CUSUM detallado |
+| 9 | GET | `/api/predios/{id}/alertas` | Eventos/alertas recientes |
+| 10 | GET | `/api/nodos/{id}` | Detalle completo: score desglosado, tendencia, clima, microbioma |
+| 11 | GET | `/api/nodos/{id}/lecturas` | Serie de tiempo (5min, 1h, 1d) |
+| 12 | GET | `/api/nodos/{id}/firma` | Últimas 20 firmas de un nodo |
+| 13 | GET | `/api/nodos/{id}/alertas` | Alertas de un nodo |
+| 14 | GET | `/api/clima/actual` | Última lectura + ETo del día |
+| 15 | GET | `/api/clima/historico` | Serie clima (configurable días) |
+| 16 | GET | `/api/clima/pronostico` | Próximos 7 días |
+| 17 | GET | `/api/microbioma/nodo/{id}` | Últimos registros de lab |
+| 18 | GET | `/api/microbioma/modelo` | Métricas del modelo ML (R², MAE, features) |
+| 19 | POST | `/api/microbioma/predecir/{id}` | Predicción ML del microbioma |
+| 20 | POST | `/api/alertas/{id}/diagnostico` | Genera diagnóstico IA con Claude |
+| 21 | POST | `/api/reportes/semanal` | Reporte técnico semanal |
+| 22 | POST | `/api/reportes/agricultor` | Reporte WhatsApp para agricultor |
+| 23 | POST | `/api/diagnostico/visual` | Foto + sensores → Claude Vision |
+| 24 | POST | `/api/tratamientos` | Registrar aplicación de bioinsumo |
+| 25 | POST | `/api/microbioma` | Registrar qPCR con snapshot sensores |
+| 26 | GET | `/api/health` | Status del sistema |
 
 Documentación Swagger automática en `/docs`.
 
@@ -404,13 +423,13 @@ Detalle completo en `docs/Presupuesto_Piloto_Nextipac.xlsx`.
 
 | Métrica | Valor |
 |---------|-------|
-| Líneas de código | 8,316 |
-| Archivos de código | ~30 |
-| Endpoints API | 24 |
+| Líneas de código | 9,915 |
+| Archivos de código | ~35 |
+| Endpoints API | 26 |
 | Tablas PostgreSQL | 8 |
 | Registros en DB | 420,000+ |
-| Commits en GitHub | 12 |
-| Tiempo de desarrollo | 2 días (22-23 marzo 2026, incluye rediseño UI dark theme) |
+| Commits en GitHub | 31 |
+| Tiempo de desarrollo | 2 días (22-23 marzo 2026, incluye rediseño UI dark theme + sistema completo de alertas interactivas + consultor IA + CRUD predios) |
 | Costo de desarrollo | $0 (herramientas gratuitas + Claude Code) |
 | Costo operativo mensual | ~$11 USD |
 
