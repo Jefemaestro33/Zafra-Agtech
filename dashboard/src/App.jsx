@@ -98,14 +98,9 @@ export default function App() {
             >
               <Leaf size={16} style={{ color: 'var(--color-accent-green)' }} />
             </div>
-            <div>
-              <h1 className="text-sm font-bold tracking-tight" style={{ color: 'var(--color-text-primary)' }}>
-                AgTech
-              </h1>
-              <p className="text-[10px] leading-none hidden sm:block" style={{ color: 'var(--color-text-muted)' }}>
-                Monitoreo inteligente
-              </p>
-            </div>
+            <h1 className="text-sm font-bold tracking-tight" style={{ color: 'var(--color-text-primary)' }}>
+              AgTech
+            </h1>
           </div>
 
           <div className="flex items-center gap-2">
@@ -126,12 +121,6 @@ export default function App() {
                 </span>
               )}
             </button>
-            <div
-              className="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold"
-              style={{ background: 'var(--color-surface-4)', color: 'var(--color-text-secondary)', border: '1px solid var(--color-border)' }}
-            >
-              ED
-            </div>
           </div>
         </div>
       </header>
@@ -148,7 +137,7 @@ export default function App() {
         {/* Sidebar */}
         <aside
           className={`
-            shrink-0 overflow-y-auto overflow-x-hidden scrollbar-none z-40
+            shrink-0 overflow-y-auto overflow-x-hidden scrollbar-none z-40 flex flex-col
             fixed lg:static inset-y-0 left-0 top-12
             transform transition-all duration-200 ease-out
             ${mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
@@ -174,127 +163,162 @@ export default function App() {
 
           {/* Expanded nav */}
           {!collapsed && (
-            <div className="px-3 pb-4">
-              <nav className="space-y-0.5">
-                {tabs.map(t => {
-                  const active = isTabActive(t)
-                  const Icon = t.icon
-                  const hasSub = !!t.sub
-                  const subOpen = hasSub && alertasOpen
+            <div className="flex flex-col flex-1">
+              <div className="px-3 pb-4">
+                <nav className="space-y-0.5">
+                  {tabs.map(t => {
+                    const active = isTabActive(t)
+                    const Icon = t.icon
+                    const hasSub = !!t.sub
+                    const subOpen = hasSub && alertasOpen
 
-                  return (
-                    <div key={t.path}>
-                      <div
-                        className="flex items-center rounded-xl text-sm font-medium transition-all duration-200 cursor-pointer"
-                        style={{
-                          background: active ? 'var(--color-accent-green-dim)' : 'transparent',
-                          color: active ? 'var(--color-accent-green)' : 'var(--color-text-muted)',
-                          border: active ? '1px solid rgba(16,185,129,0.2)' : '1px solid transparent',
-                        }}
-                        onMouseEnter={e => {
-                          if (!active) { e.currentTarget.style.background = 'var(--color-surface-3)'; e.currentTarget.style.color = 'var(--color-text-secondary)' }
-                        }}
-                        onMouseLeave={e => {
-                          if (!active) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--color-text-muted)' }
-                        }}
-                      >
-                        <NavLink
-                          to={t.path}
-                          end={t.path === '/' || t.path === '/alertas'}
-                          onClick={() => {
-                            setMobileOpen(false)
-                            if (hasSub) setAlertasOpen(!alertasOpen)
+                    return (
+                      <div key={t.path}>
+                        <div
+                          className="flex items-center rounded-xl text-sm font-medium transition-all duration-200 cursor-pointer"
+                          style={{
+                            background: active ? 'var(--color-accent-green-dim)' : 'transparent',
+                            color: active ? 'var(--color-accent-green)' : 'var(--color-text-muted)',
+                            border: active ? '1px solid rgba(16,185,129,0.2)' : '1px solid transparent',
                           }}
-                          className="flex items-center gap-3 px-3 py-2.5 flex-1"
+                          onMouseEnter={e => {
+                            if (!active) { e.currentTarget.style.background = 'var(--color-surface-3)'; e.currentTarget.style.color = 'var(--color-text-secondary)' }
+                          }}
+                          onMouseLeave={e => {
+                            if (!active) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--color-text-muted)' }
+                          }}
                         >
-                          <Icon size={18} />
-                          <span>{t.label}</span>
-                        </NavLink>
-                        {hasSub && (
-                          <button
-                            onClick={(e) => { e.preventDefault(); setAlertasOpen(!alertasOpen) }}
-                            className="pr-3 py-2.5"
-                            style={{ color: 'inherit' }}
+                          <NavLink
+                            to={t.path}
+                            end={t.path === '/' || t.path === '/alertas'}
+                            onClick={() => {
+                              setMobileOpen(false)
+                              if (hasSub) setAlertasOpen(!alertasOpen)
+                            }}
+                            className="flex items-center gap-3 px-3 py-2.5 flex-1"
                           >
-                            <ChevronsRight
-                              size={14}
-                              style={{
-                                transform: subOpen ? 'rotate(90deg)' : 'rotate(0deg)',
-                                transition: 'transform 0.2s',
-                              }}
-                            />
-                          </button>
+                            <Icon size={18} />
+                            <span>{t.label}</span>
+                          </NavLink>
+                          {hasSub && (
+                            <button
+                              onClick={(e) => { e.preventDefault(); setAlertasOpen(!alertasOpen) }}
+                              className="pr-3 py-2.5"
+                              style={{ color: 'inherit' }}
+                            >
+                              <ChevronsRight
+                                size={14}
+                                style={{
+                                  transform: subOpen ? 'rotate(90deg)' : 'rotate(0deg)',
+                                  transition: 'transform 0.2s',
+                                }}
+                              />
+                            </button>
+                          )}
+                        </div>
+
+                        {/* Sub-items */}
+                        {hasSub && subOpen && (
+                          <div className="ml-5 mt-0.5 space-y-0.5 border-l" style={{ borderColor: 'var(--color-border)' }}>
+                            {t.sub.map(sub => {
+                              const subActive = isSubActive(sub)
+                              const SubIcon = sub.icon
+                              return (
+                                <NavLink
+                                  key={sub.path}
+                                  to={sub.path}
+                                  end
+                                  onClick={() => setMobileOpen(false)}
+                                  className="flex items-center gap-2.5 pl-4 pr-3 py-2 rounded-r-lg text-xs font-medium transition-all duration-200"
+                                  style={{
+                                    background: subActive ? 'var(--color-accent-green-dim)' : 'transparent',
+                                    color: subActive ? 'var(--color-accent-green)' : 'var(--color-text-muted)',
+                                  }}
+                                  onMouseEnter={e => {
+                                    if (!subActive) { e.currentTarget.style.background = 'var(--color-surface-3)'; e.currentTarget.style.color = 'var(--color-text-secondary)' }
+                                  }}
+                                  onMouseLeave={e => {
+                                    if (!subActive) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--color-text-muted)' }
+                                  }}
+                                >
+                                  <SubIcon size={14} />
+                                  <span>{sub.label}</span>
+                                </NavLink>
+                              )
+                            })}
+                          </div>
                         )}
                       </div>
+                    )
+                  })}
+                </nav>
+              </div>
 
-                      {/* Sub-items */}
-                      {hasSub && subOpen && (
-                        <div className="ml-5 mt-0.5 space-y-0.5 border-l" style={{ borderColor: 'var(--color-border)' }}>
-                          {t.sub.map(sub => {
-                            const subActive = isSubActive(sub)
-                            const SubIcon = sub.icon
-                            return (
-                              <NavLink
-                                key={sub.path}
-                                to={sub.path}
-                                end
-                                onClick={() => setMobileOpen(false)}
-                                className="flex items-center gap-2.5 pl-4 pr-3 py-2 rounded-r-lg text-xs font-medium transition-all duration-200"
-                                style={{
-                                  background: subActive ? 'var(--color-accent-green-dim)' : 'transparent',
-                                  color: subActive ? 'var(--color-accent-green)' : 'var(--color-text-muted)',
-                                }}
-                                onMouseEnter={e => {
-                                  if (!subActive) { e.currentTarget.style.background = 'var(--color-surface-3)'; e.currentTarget.style.color = 'var(--color-text-secondary)' }
-                                }}
-                                onMouseLeave={e => {
-                                  if (!subActive) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--color-text-muted)' }
-                                }}
-                              >
-                                <SubIcon size={14} />
-                                <span>{sub.label}</span>
-                              </NavLink>
-                            )
-                          })}
-                        </div>
-                      )}
+              {/* Profile — bottom */}
+              <div className="mt-auto px-3 pb-4">
+                <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: 12 }}>
+                  <div
+                    className="flex items-center gap-3 px-3 py-2.5 rounded-xl"
+                    style={{ background: 'var(--color-surface-2)', border: '1px solid var(--color-border)' }}
+                  >
+                    <div
+                      className="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold shrink-0"
+                      style={{ background: 'var(--color-accent-green-dim)', color: 'var(--color-accent-green)', border: '1px solid rgba(16,185,129,0.2)' }}
+                    >
+                      ED
                     </div>
-                  )
-                })}
-              </nav>
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium truncate" style={{ color: 'var(--color-text-primary)' }}>Ernest Darell</p>
+                      <p className="text-[10px]" style={{ color: 'var(--color-text-muted)' }}>Admin</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
 
           {/* Collapsed nav */}
           {collapsed && (
-            <nav className="px-1.5 pb-4 space-y-1">
-              {tabs.map(t => {
-                const active = isTabActive(t)
-                const Icon = t.icon
-                return (
-                  <NavLink
-                    key={t.path}
-                    to={t.path}
-                    end={t.path === '/' || t.path === '/alertas'}
-                    className="flex items-center justify-center w-10 h-10 mx-auto rounded-xl transition-all duration-200"
-                    style={{
-                      background: active ? 'var(--color-accent-green-dim)' : 'transparent',
-                      color: active ? 'var(--color-accent-green)' : 'var(--color-text-muted)',
-                      border: active ? '1px solid rgba(16,185,129,0.2)' : '1px solid transparent',
-                    }}
-                    onMouseEnter={e => {
-                      if (!active) { e.currentTarget.style.background = 'var(--color-surface-3)'; e.currentTarget.style.color = 'var(--color-text-secondary)' }
-                    }}
-                    onMouseLeave={e => {
-                      if (!active) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--color-text-muted)' }
-                    }}
-                    title={t.label}
-                  >
-                    <Icon size={20} />
-                  </NavLink>
-                )
-              })}
-            </nav>
+            <div className="flex flex-col flex-1">
+              <nav className="px-1.5 pb-4 space-y-1">
+                {tabs.map(t => {
+                  const active = isTabActive(t)
+                  const Icon = t.icon
+                  return (
+                    <NavLink
+                      key={t.path}
+                      to={t.path}
+                      end={t.path === '/' || t.path === '/alertas'}
+                      className="flex items-center justify-center w-10 h-10 mx-auto rounded-xl transition-all duration-200"
+                      style={{
+                        background: active ? 'var(--color-accent-green-dim)' : 'transparent',
+                        color: active ? 'var(--color-accent-green)' : 'var(--color-text-muted)',
+                        border: active ? '1px solid rgba(16,185,129,0.2)' : '1px solid transparent',
+                      }}
+                      onMouseEnter={e => {
+                        if (!active) { e.currentTarget.style.background = 'var(--color-surface-3)'; e.currentTarget.style.color = 'var(--color-text-secondary)' }
+                      }}
+                      onMouseLeave={e => {
+                        if (!active) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--color-text-muted)' }
+                      }}
+                      title={t.label}
+                    >
+                      <Icon size={20} />
+                    </NavLink>
+                  )
+                })}
+              </nav>
+
+              <div className="mt-auto pb-4 flex justify-center">
+                <div
+                  className="w-10 h-10 rounded-xl flex items-center justify-center text-xs font-bold"
+                  style={{ background: 'var(--color-accent-green-dim)', color: 'var(--color-accent-green)', border: '1px solid rgba(16,185,129,0.2)' }}
+                  title="Ernest Darell — Admin"
+                >
+                  ED
+                </div>
+              </div>
+            </div>
           )}
         </aside>
 
