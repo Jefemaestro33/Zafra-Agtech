@@ -25,8 +25,8 @@ import AlertasView from './views/AlertasView'
 import PredioView from './views/PredioView'
 
 const tabs = [
-  { path: '/', label: 'Overview', icon: LayoutDashboard },
   { path: '/predio', label: 'Predio', icon: Info },
+  { path: '/', label: 'Overview', icon: LayoutDashboard },
   { path: '/nodo', label: 'Nodo detalle', icon: Radio },
   { path: '/firma', label: 'Firma hídrica', icon: Droplets },
   { path: '/comparativo', label: 'Comparativo', icon: GitCompareArrows },
