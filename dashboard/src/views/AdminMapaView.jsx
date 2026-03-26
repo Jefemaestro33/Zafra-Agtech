@@ -3,7 +3,7 @@ import { MapContainer, TileLayer, CircleMarker, Marker, Popup, useMapEvents } fr
 import { useApi } from '../hooks/useApi'
 import { getToken } from '../hooks/useAuth'
 import {
-  Save, Loader2, Check, X, Radio, Satellite, Map, MousePointer, GripVertical, Globe, ScanEye,
+  Save, Loader2, Check, X, Radio, Satellite, Map, MousePointer, GripVertical, Globe,
 } from 'lucide-react'
 import Loading from '../components/Loading'
 
@@ -15,10 +15,6 @@ const TILES = {
   google: {
     url: 'https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',
     attribution: 'Google',
-  },
-  sentinel: {
-    url: 'https://tiles.maps.eox.at/wmts?layer=s2cloudless-2021_3857&style=default&tilematrixset=g&Service=WMTS&Request=GetTile&Version=1.0.0&Format=image%2Fjpeg&TileMatrix={z}&TileCol={x}&TileRow={y}',
-    attribution: 'Sentinel-2 Cloudless — EOX',
   },
   mapa: {
     url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
@@ -249,7 +245,6 @@ export default function AdminMapaView({ predioId }) {
             {[
               { key: 'esri', label: 'Esri', Icon: Satellite },
               { key: 'google', label: 'Google', Icon: Globe },
-              { key: 'sentinel', label: 'Sentinel-2', Icon: ScanEye },
               { key: 'mapa', label: 'Mapa', Icon: Map },
             ].map(m => (
               <button

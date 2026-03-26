@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useApi } from '../hooks/useApi'
 import { MapContainer, TileLayer, CircleMarker, Popup } from 'react-leaflet'
-import { Satellite, Map, Radio, Droplets, Thermometer, Battery, Wifi, WifiOff, Globe, ScanEye } from 'lucide-react'
+import { Satellite, Map, Radio, Droplets, Thermometer, Battery, Wifi, WifiOff, Globe } from 'lucide-react'
 import KpiCard from '../components/KpiCard'
 import ScoreBadge from '../components/ScoreBadge'
 import Loading from '../components/Loading'
@@ -29,10 +29,6 @@ const TILES = {
   google: {
     url: 'https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',
     attribution: 'Google',
-  },
-  sentinel: {
-    url: 'https://tiles.maps.eox.at/wmts?layer=s2cloudless-2021_3857&style=default&tilematrixset=g&Service=WMTS&Request=GetTile&Version=1.0.0&Format=image%2Fjpeg&TileMatrix={z}&TileCol={x}&TileRow={y}',
-    attribution: 'Sentinel-2 Cloudless — EOX',
   },
   mapa: {
     url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
@@ -114,7 +110,6 @@ export default function OverviewView({ predioId }) {
             {[
               { key: 'esri', label: 'Esri', Icon: Satellite },
               { key: 'google', label: 'Google', Icon: Globe },
-              { key: 'sentinel', label: 'Sentinel-2', Icon: ScanEye },
               { key: 'mapa', label: 'Mapa', Icon: Map },
             ].map(m => (
               <button
