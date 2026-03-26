@@ -6,7 +6,7 @@ import {
   LayoutDashboard, Radio, Droplets, GitCompareArrows, CloudSun, BrainCircuit,
   Bell, Leaf, Menu, X, ChevronsLeft, ChevronsRight, Info, Star, Trash2,
   MessageCircleQuestion, Users, UserCog, History, Download, Receipt, DollarSign,
-  Settings, BellRing, Plug, DatabaseBackup, BookOpen, LogOut, ChevronUp, PlusCircle, FilePenLine,
+  Settings, BellRing, Plug, DatabaseBackup, BookOpen, LogOut, ChevronUp, PlusCircle, FilePenLine, MapPinned,
   Loader2,
 } from 'lucide-react'
 import OverviewView from './views/OverviewView'
@@ -25,6 +25,7 @@ import ConfigAlertasView from './views/ConfigAlertasView'
 import ConfigNotificacionesView from './views/ConfigNotificacionesView'
 import ConfigIntegracionesView from './views/ConfigIntegracionesView'
 import ConfigRespaldosView from './views/ConfigRespaldosView'
+import AdminMapaView from './views/AdminMapaView'
 
 const tabs = [
   { path: '/predio', label: 'Predio', icon: Info },
@@ -44,6 +45,7 @@ const tabs = [
   { path: '/consultor', label: 'Consultor', icon: MessageCircleQuestion },
   { type: 'section', label: 'Administrador' },
   { path: '/admin/predio', label: 'Editar predio', icon: FilePenLine },
+  { path: '/admin/mapa', label: 'Posicionar nodos', icon: MapPinned },
   { path: '/nuevo-predio', label: 'Nuevo predio', icon: PlusCircle },
   { path: '/agronomos', label: 'Agrónomos', icon: Users },
   { path: '/usuarios', label: 'Usuarios', icon: UserCog },
@@ -401,6 +403,7 @@ export default function App() {
               <Route path="/alertas/borradas" element={<AlertasView predioId={predioId} filter="borradas" />} />
               <Route path="/consultor" element={<ConsultorView predioId={predioId} />} />
               <Route path="/admin/predio" element={<AdminPredioView predioId={predioId} predios={predios} onChangePredio={setPredioId} />} />
+              <Route path="/admin/mapa" element={<AdminMapaView predioId={predioId} />} />
               <Route path="/nuevo-predio" element={<NuevoPredioView onCreated={(id) => { setPredioId(id); navigate('/predio') }} />} />
               <Route path="/agronomos" element={<ProximamenteView title="Agrónomos" description="Gestión del equipo de campo: agregar, quitar y asignar agrónomos a predios. Control de accesos por rol." icon={Users} />} />
               <Route path="/usuarios" element={<ProximamenteView title="Usuarios" description="Administración de usuarios del sistema: roles (admin, agrónomo, observador), permisos y accesos al dashboard." icon={UserCog} />} />

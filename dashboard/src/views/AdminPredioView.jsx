@@ -53,6 +53,8 @@ const fields = [
   { key: 'hectareas', label: 'Hectáreas', icon: Ruler, color: 'var(--color-accent-cyan)', type: 'number' },
   { key: 'municipio', label: 'Municipio / Ubicación', icon: Navigation, color: 'var(--color-accent-blue)', type: 'text' },
   { key: 'fecha_instalacion', label: 'Fecha de instalación', icon: Calendar, color: 'var(--color-accent-violet)', type: 'text' },
+  { key: 'lat', label: 'Latitud', icon: MapPin, color: 'var(--color-accent-amber)', type: 'number' },
+  { key: 'lon', label: 'Longitud', icon: MapPin, color: 'var(--color-accent-amber)', type: 'number' },
 ]
 
 export default function AdminPredioView({ predioId, predios, onChangePredio }) {

@@ -247,7 +247,7 @@ def crear_predio(datos: dict):
 @app.put("/api/predios/{predio_id}")
 def actualizar_predio(predio_id: int, datos: dict):
     """Actualiza campos editables del predio."""
-    campos_permitidos = ["nombre", "cultivo", "tipo_suelo", "hectareas", "municipio", "fecha_instalacion"]
+    campos_permitidos = ["nombre", "cultivo", "tipo_suelo", "hectareas", "municipio", "fecha_instalacion", "lat", "lon"]
 
     updates = {k: v for k, v in datos.items() if k in campos_permitidos}
     if not updates:
@@ -383,6 +383,22 @@ def detalle_nodo(nodo_id: int):
     if "error" in resumen:
         raise HTTPException(404, resumen["error"])
     return serialize(resumen)
+
+
+@app.put("/api/nodos/{nodo_id}")
+def actualizar_nodo(nodo_id: int, datos: dict):
+    """Actualiza coordenadas u otros campos del nodo."""
+    campos_permitidos = ["lat", "lon", "nombre", "notas"]
+    updates = {k: v for k, v in datos.items() if k in campos_permitidos}
+    if not updates:
+        raise HTTPException(400, "No se proporcionaron campos válidos")
+    set_clause = ", ".join([f"{k} = %s" for k in updates.keys()])
+    values = list(updates.values()) + [nodo_id]
+    try:
+        execute(f"UPDATE nodos SET {set_clause} WHERE nodo_id = %s", values)
+        return {"ok": True, "nodo_id": nodo_id, "updated": updates}
+    except Exception as e:
+        raise HTTPException(500, f"Error al actualizar: {e}")
 
 
 @app.get("/api/nodos/{nodo_id}/lecturas")
