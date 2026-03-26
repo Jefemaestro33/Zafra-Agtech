@@ -3,14 +3,22 @@ import { MapContainer, TileLayer, CircleMarker, Marker, Popup, useMapEvents } fr
 import { useApi } from '../hooks/useApi'
 import { getToken } from '../hooks/useAuth'
 import {
-  Save, Loader2, Check, X, Radio, Satellite, Map, MousePointer, GripVertical,
+  Save, Loader2, Check, X, Radio, Satellite, Map, MousePointer, GripVertical, Globe, ScanEye,
 } from 'lucide-react'
 import Loading from '../components/Loading'
 
 const TILES = {
-  satelital: {
+  esri: {
     url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
     attribution: 'Esri',
+  },
+  google: {
+    url: 'https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',
+    attribution: 'Google',
+  },
+  sentinel: {
+    url: 'https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless-2021_3857/default/g/{z}/{y}/{x}.jpg',
+    attribution: 'Sentinel-2 Cloudless — EOX',
   },
   mapa: {
     url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
@@ -239,7 +247,9 @@ export default function AdminMapaView({ predioId }) {
           </h3>
           <div className="flex gap-1">
             {[
-              { key: 'satelital', label: 'Satelital', Icon: Satellite },
+              { key: 'esri', label: 'Esri', Icon: Satellite },
+              { key: 'google', label: 'Google', Icon: Globe },
+              { key: 'sentinel', label: 'Sentinel-2', Icon: ScanEye },
               { key: 'mapa', label: 'Mapa', Icon: Map },
             ].map(m => (
               <button

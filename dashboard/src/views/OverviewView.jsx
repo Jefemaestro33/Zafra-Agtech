@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useApi } from '../hooks/useApi'
 import { MapContainer, TileLayer, CircleMarker, Popup } from 'react-leaflet'
-import { Satellite, Map, Radio, Droplets, Thermometer, Battery, Wifi, WifiOff } from 'lucide-react'
+import { Satellite, Map, Radio, Droplets, Thermometer, Battery, Wifi, WifiOff, Globe, ScanEye } from 'lucide-react'
 import KpiCard from '../components/KpiCard'
 import ScoreBadge from '../components/ScoreBadge'
 import Loading from '../components/Loading'
@@ -22,9 +22,17 @@ function scoreGlow(score) {
 }
 
 const TILES = {
-  satelital: {
+  esri: {
     url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
     attribution: 'Esri',
+  },
+  google: {
+    url: 'https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',
+    attribution: 'Google',
+  },
+  sentinel: {
+    url: 'https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless-2021_3857/default/g/{z}/{y}/{x}.jpg',
+    attribution: 'Sentinel-2 Cloudless — EOX',
   },
   mapa: {
     url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
@@ -34,7 +42,7 @@ const TILES = {
 
 export default function OverviewView({ predioId }) {
   const { data, loading } = useApi(`/api/predios/${predioId}/overview`)
-  const [tileMode, setTileMode] = useState('satelital')
+  const [tileMode, setTileMode] = useState('esri')
   const navigate = useNavigate()
 
   if (loading) return <Loading />
@@ -104,7 +112,9 @@ export default function OverviewView({ predioId }) {
           </h2>
           <div className="flex gap-1">
             {[
-              { key: 'satelital', label: 'Satelital', Icon: Satellite },
+              { key: 'esri', label: 'Esri', Icon: Satellite },
+              { key: 'google', label: 'Google', Icon: Globe },
+              { key: 'sentinel', label: 'Sentinel-2', Icon: ScanEye },
               { key: 'mapa', label: 'Mapa', Icon: Map },
             ].map(m => (
               <button
