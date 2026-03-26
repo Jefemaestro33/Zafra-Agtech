@@ -21,6 +21,7 @@ import ProximamenteView from './views/ProximamenteView'
 import NuevoPredioView from './views/NuevoPredioView'
 import AdminPredioView from './views/AdminPredioView'
 import LoginView from './views/LoginView'
+import ConfigAlertasView from './views/ConfigAlertasView'
 
 const tabs = [
   { path: '/predio', label: 'Predio', icon: Info },
@@ -404,7 +405,7 @@ export default function App() {
               <Route path="/exportar" element={<ProximamenteView title="Exportar datos" description="Descarga lecturas de sensores, alertas, reportes y firmas hídricas en formato CSV o PDF para análisis externo." icon={Download} />} />
               <Route path="/contabilidad" element={<ProximamenteView title="Contabilidad" description="Registro de gastos operativos, costos de laboratorio, hardware y mantenimiento por predio." icon={Receipt} />} />
               <Route path="/finanzas" element={<ProximamenteView title="Finanzas" description="Proyección de ingresos por predio, tracking del 30% de incremento de producción, y análisis de rentabilidad." icon={DollarSign} />} />
-              <Route path="/config/alertas" element={<ProximamenteView title="Configuración de alertas" description="Ajusta los umbrales de Phytophthora, riego, batería y sensores offline para personalizar cuándo se generan alertas." icon={Settings} />} />
+              <Route path="/config/alertas" element={<ConfigAlertasView />} />
               <Route path="/config/notificaciones" element={<ProximamenteView title="Notificaciones" description="Configura cómo y dónde recibes alertas: email, WhatsApp, Telegram, o solo en el dashboard." icon={BellRing} />} />
               <Route path="/config/integraciones" element={<ProximamenteView title="Integraciones" description="Administra API keys de Claude, tokens de Telegram, webhooks y conexiones con servicios externos." icon={Plug} />} />
               <Route path="/config/respaldos" element={<ProximamenteView title="Respaldos" description="Backup y restore de la base de datos. Historial de respaldos automáticos y opción de descarga manual." icon={DatabaseBackup} />} />

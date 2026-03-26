@@ -53,6 +53,11 @@ from auth import (
     LoginRequest,
     TokenResponse,
 )
+from config_alertas import (
+    get_config as get_alert_config_data,
+    update_config as update_alert_config,
+    reset_config as reset_alert_config,
+)
 
 # ============================================================
 # APP
@@ -164,6 +169,27 @@ def login(req: LoginRequest):
 @app.get("/api/auth/me")
 def auth_me(user: dict = Depends(verificar_token)):
     return user
+
+
+# ============================================================
+# CONFIG ALERTAS
+# ============================================================
+@app.get("/api/config/alertas")
+def config_alertas_get():
+    return get_alert_config_data()
+
+
+@app.put("/api/config/alertas/{section}")
+def config_alertas_update(section: str, datos: dict):
+    try:
+        return update_alert_config(section, datos)
+    except KeyError as e:
+        raise HTTPException(400, str(e))
+
+
+@app.post("/api/config/alertas/reset")
+def config_alertas_reset():
+    return reset_alert_config()
 
 
 # ============================================================
