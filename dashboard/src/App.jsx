@@ -60,6 +60,12 @@ export default function App() {
   const [profileMenuOpen, setProfileMenuOpen] = useState(false)
   const [darkMode, setDarkMode] = useState(true)
 
+  const alertCount = alertas?.length || 0
+  const hasAlerts = alertCount > 0
+
+  useEffect(() => { setMobileOpen(false); setProfileMenuOpen(false) }, [location.pathname])
+  useEffect(() => { if (location.pathname.startsWith('/alertas')) setAlertasOpen(true) }, [location.pathname])
+
   // Auth loading screen
   if (authLoading) {
     return (
@@ -78,12 +84,6 @@ export default function App() {
   if (!user) {
     return <LoginView onLogin={login} />
   }
-
-  const alertCount = alertas?.length || 0
-  const hasAlerts = alertCount > 0
-
-  useEffect(() => { setMobileOpen(false); setProfileMenuOpen(false) }, [location.pathname])
-  useEffect(() => { if (location.pathname.startsWith('/alertas')) setAlertasOpen(true) }, [location.pathname])
 
   const isTabActive = (t) => {
     if (t.path === '/') return location.pathname === '/'
