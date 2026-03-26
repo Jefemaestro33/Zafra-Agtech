@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react'
 import { Routes, Route, NavLink, useNavigate, useLocation } from 'react-router-dom'
 import { useApi } from './hooks/useApi'
+import { useAuth } from './hooks/useAuth'
 import {
   LayoutDashboard, Radio, Droplets, GitCompareArrows, CloudSun, BrainCircuit,
   Bell, Leaf, Menu, X, ChevronsLeft, ChevronsRight, Info, Star, Trash2,
   MessageCircleQuestion, Users, UserCog, History, Download, Receipt, DollarSign,
   Settings, BellRing, Plug, DatabaseBackup, Sun, Moon, BookOpen, LogOut, ChevronUp, PlusCircle,
+  Loader2,
 } from 'lucide-react'
 import OverviewView from './views/OverviewView'
 import NodoView from './views/NodoView'
@@ -17,6 +19,7 @@ import PredioView from './views/PredioView'
 import ConsultorView from './views/ConsultorView'
 import ProximamenteView from './views/ProximamenteView'
 import NuevoPredioView from './views/NuevoPredioView'
+import LoginView from './views/LoginView'
 
 const tabs = [
   { path: '/predio', label: 'Predio', icon: Info },
@@ -45,9 +48,10 @@ const tabs = [
 ]
 
 export default function App() {
-  const { data: predios } = useApi('/api/predios')
+  const { user, loading: authLoading, login, logout } = useAuth()
+  const { data: predios } = useApi(user ? '/api/predios' : null)
   const [predioId, setPredioId] = useState(1)
-  const { data: alertas } = useApi(`/api/predios/${predioId}/alertas`)
+  const { data: alertas } = useApi(user ? `/api/predios/${predioId}/alertas` : null)
   const navigate = useNavigate()
   const location = useLocation()
   const [mobileOpen, setMobileOpen] = useState(false)
@@ -55,6 +59,25 @@ export default function App() {
   const [alertasOpen, setAlertasOpen] = useState(false)
   const [profileMenuOpen, setProfileMenuOpen] = useState(false)
   const [darkMode, setDarkMode] = useState(true)
+
+  // Auth loading screen
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center" style={{ background: 'var(--color-surface-0)' }}>
+        <div className="flex flex-col items-center gap-3 animate-in">
+          <div className="w-12 h-12 rounded-2xl flex items-center justify-center" style={{ background: 'var(--color-glow-green)', border: '1px solid var(--color-accent-green-dim)' }}>
+            <Leaf size={24} style={{ color: 'var(--color-accent-green)' }} />
+          </div>
+          <Loader2 size={20} className="animate-spin" style={{ color: 'var(--color-accent-green)' }} />
+        </div>
+      </div>
+    )
+  }
+
+  // Login screen
+  if (!user) {
+    return <LoginView onLogin={login} />
+  }
 
   const alertCount = alertas?.length || 0
   const hasAlerts = alertCount > 0
@@ -251,7 +274,7 @@ export default function App() {
                         <div className="my-1 mx-3" style={{ borderTop: '1px solid var(--color-border)' }} />
 
                         <button
-                          onClick={() => { setProfileMenuOpen(false); alert('Próximamente: Cerrar sesión') }}
+                          onClick={() => { setProfileMenuOpen(false); logout(); navigate('/') }}
                           className="w-full flex items-center gap-3 px-4 py-2 text-left transition-colors"
                           onMouseEnter={e => { e.currentTarget.style.background = 'var(--color-glow-red)' }}
                           onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
@@ -275,11 +298,11 @@ export default function App() {
                       className="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold shrink-0"
                       style={{ background: 'var(--color-accent-green-dim)', color: 'var(--color-accent-green)', border: '1px solid rgba(16,185,129,0.2)' }}
                     >
-                      ED
+                      {user.iniciales}
                     </div>
                     <div className="min-w-0 text-left">
-                      <p className="text-sm font-medium truncate" style={{ color: 'var(--color-text-primary)' }}>Ernest</p>
-                      <p className="text-[10px]" style={{ color: 'var(--color-text-muted)' }}>Admin</p>
+                      <p className="text-sm font-medium truncate" style={{ color: 'var(--color-text-primary)' }}>{user.nombre}</p>
+                      <p className="text-[10px]" style={{ color: 'var(--color-text-muted)' }}>{user.rol === 'admin' ? 'Admin' : 'Agrónomo'}</p>
                     </div>
                     <ChevronUp size={14} className="ml-auto" style={{ color: 'var(--color-text-muted)', transform: profileMenuOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }} />
                   </button>
@@ -320,8 +343,8 @@ export default function App() {
                       style={{ background: 'var(--color-surface-3)', border: '1px solid var(--color-border-light)', width: 220 }}
                     >
                       <div className="px-4 py-2 mb-1" style={{ borderBottom: '1px solid var(--color-border)' }}>
-                        <p className="text-xs font-bold" style={{ color: 'var(--color-text-primary)' }}>Ernest</p>
-                        <p className="text-[10px]" style={{ color: 'var(--color-text-muted)' }}>Administrador · AgTech</p>
+                        <p className="text-xs font-bold" style={{ color: 'var(--color-text-primary)' }}>{user.nombre}</p>
+                        <p className="text-[10px]" style={{ color: 'var(--color-text-muted)' }}>{user.rol === 'admin' ? 'Administrador' : 'Agrónomo'} · AgTech</p>
                       </div>
                       {[
                         { icon: Settings, label: 'Config. alertas' },
@@ -353,7 +376,7 @@ export default function App() {
                         <span className="text-xs" style={{ color: 'var(--color-text-primary)' }}>Documentación</span>
                       </button>
                       <div className="my-1 mx-3" style={{ borderTop: '1px solid var(--color-border)' }} />
-                      <button onClick={() => { setProfileMenuOpen(false); alert('Próximamente') }}
+                      <button onClick={() => { setProfileMenuOpen(false); logout(); navigate('/') }}
                         className="w-full flex items-center gap-3 px-4 py-2 text-left transition-colors"
                         onMouseEnter={e => e.currentTarget.style.background = 'var(--color-glow-red)'}
                         onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
@@ -367,9 +390,9 @@ export default function App() {
                   onClick={() => setProfileMenuOpen(!profileMenuOpen)}
                   className="w-10 h-10 rounded-xl flex items-center justify-center text-xs font-bold transition-colors"
                   style={{ background: profileMenuOpen ? 'var(--color-surface-3)' : 'var(--color-accent-green-dim)', color: 'var(--color-accent-green)', border: '1px solid rgba(16,185,129,0.2)' }}
-                  title="Ernest — Admin"
+                  title={`${user.nombre} — ${user.rol === 'admin' ? 'Admin' : 'Agrónomo'}`}
                 >
-                  ED
+                  {user.iniciales}
                 </button>
               </div>
             </div>

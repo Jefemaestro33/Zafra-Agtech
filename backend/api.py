@@ -15,7 +15,7 @@ from typing import Optional
 
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse
@@ -45,6 +45,13 @@ from llm_consultor import (
     convertir_resumen_a_texto,
     consultar_llm_visual,
     parsear_diagnostico,
+)
+from auth import (
+    autenticar_usuario,
+    crear_token,
+    verificar_token,
+    LoginRequest,
+    TokenResponse,
 )
 
 # ============================================================
@@ -134,6 +141,29 @@ class MicrobiomaCreate(BaseModel):
 class DiagnosticoVisualRequest(BaseModel):
     imagen_base64: str
     nodo_id: int
+
+
+# ============================================================
+# AUTH
+# ============================================================
+@app.post("/api/auth/login")
+def login(req: LoginRequest):
+    user = autenticar_usuario(req.usuario, req.password)
+    if not user:
+        raise HTTPException(status_code=401, detail="Usuario o contraseña incorrectos")
+    token = crear_token(user["usuario"], user["rol"])
+    return TokenResponse(
+        token=token,
+        usuario=user["usuario"],
+        nombre=user["nombre"],
+        rol=user["rol"],
+        iniciales=user["iniciales"],
+    )
+
+
+@app.get("/api/auth/me")
+def auth_me(user: dict = Depends(verificar_token)):
+    return user
 
 
 # ============================================================

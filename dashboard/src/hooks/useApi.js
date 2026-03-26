@@ -1,6 +1,12 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
+import { getToken } from './useAuth'
 
 const REFRESH_INTERVAL = 30000 // 30 seconds
+
+function authHeaders() {
+  const token = getToken()
+  return token ? { Authorization: `Bearer ${token}` } : {}
+}
 
 export function useApi(path, deps = []) {
   const [data, setData] = useState(null)
@@ -12,7 +18,7 @@ export function useApi(path, deps = []) {
     if (!path) { setLoading(false); return }
     // Only show loading spinner on first load
     if (isFirstLoad.current) setLoading(true)
-    fetch(path)
+    fetch(path, { headers: authHeaders() })
       .then(r => { if (!r.ok) throw new Error(r.status); return r.json() })
       .then(d => { setData(d); setError(null); isFirstLoad.current = false })
       .catch(e => setError(e.message))
@@ -34,8 +40,11 @@ export function useApi(path, deps = []) {
   return { data, loading, error, refetch }
 }
 
-export async function apiFetch(path) {
-  const r = await fetch(path)
+export async function apiFetch(path, options = {}) {
+  const r = await fetch(path, {
+    ...options,
+    headers: { ...authHeaders(), ...options.headers },
+  })
   if (!r.ok) throw new Error(r.status)
   return r.json()
 }
