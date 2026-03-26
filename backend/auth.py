@@ -8,10 +8,10 @@ Uso:
 import os
 from datetime import datetime, timedelta, timezone
 
+import bcrypt
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from jose import jwt, JWTError
-from passlib.context import CryptContext
 from pydantic import BaseModel
 
 
@@ -23,13 +23,19 @@ JWT_ALGORITHM = "HS256"
 JWT_EXPIRATION_HOURS = 72  # 3 días — práctico para trabajo en campo
 
 security = HTTPBearer()
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+
+def _hash_pw(password: str) -> str:
+    return bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+
+
+def _verify_pw(password: str, hashed: str) -> bool:
+    return bcrypt.checkpw(password.encode("utf-8"), hashed.encode("utf-8"))
 
 
 # ============================================================
 # USUARIOS
 # ============================================================
-# Contraseñas generadas con bcrypt — no almacenadas en texto plano
 USUARIOS = {
     "ernest": {
         "nombre": "Ernest",
@@ -37,7 +43,7 @@ USUARIOS = {
         "rol": "admin",
         "iniciales": "ED",
         # Contraseña: Nxt!p4c_Agr0-2026
-        "password_hash": pwd_context.hash("Nxt!p4c_Agr0-2026"),
+        "password_hash": _hash_pw("Nxt!p4c_Agr0-2026"),
     },
     "salvador": {
         "nombre": "Salvador",
@@ -45,7 +51,7 @@ USUARIOS = {
         "rol": "agronomo",
         "iniciales": "SV",
         # Contraseña: C4mpo_V3rde#Hass
-        "password_hash": pwd_context.hash("C4mpo_V3rde#Hass"),
+        "password_hash": _hash_pw("C4mpo_V3rde#Hass"),
     },
 }
 
@@ -74,7 +80,7 @@ def autenticar_usuario(usuario: str, password: str) -> dict | None:
     user = USUARIOS.get(usuario.lower().strip())
     if not user:
         return None
-    if not pwd_context.verify(password, user["password_hash"]):
+    if not _verify_pw(password, user["password_hash"]):
         return None
     return user
 

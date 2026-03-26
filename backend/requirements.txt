@@ -8,5 +8,5 @@ scikit-learn
 anthropic
 requests
 python-jose[cryptography]
-passlib[bcrypt]
+bcrypt
 schedule
