@@ -76,7 +76,7 @@ function StatusDot({ ok }) {
   )
 }
 
-function NotesSection({ predioId }) {
+function NotesSection({ predioId, userIniciales = '??' }) {
   const [notes, setNotes] = useState([])
   const [draft, setDraft] = useState('')
   const [loading, setLoading] = useState(false)
@@ -102,7 +102,7 @@ function NotesSection({ predioId }) {
     const newNote = {
       id: Date.now(),
       text: draft.trim(),
-      author: 'ED',
+      author: userIniciales,
       timestamp: new Date().toISOString(),
     }
     saveNotes([newNote, ...notes])
@@ -217,7 +217,7 @@ function NotesSection({ predioId }) {
   )
 }
 
-export default function PredioView({ predioId, onChangePredio, predios }) {
+export default function PredioView({ predioId, onChangePredio, predios, user }) {
   const { data: overview, loading } = useApi(`/api/predios/${predioId}/overview`)
   const { data: health } = useApi('/api/health')
 
@@ -284,7 +284,7 @@ export default function PredioView({ predioId, onChangePredio, predios }) {
           <InfoField icon={Mountain} label="Tipo de suelo" value={predio?.tipo_suelo || 'Andisol volcánico'} color="var(--color-accent-amber)" />
           <InfoField icon={Ruler} label="Superficie" value={`${predio?.hectareas || 4} hectáreas`} color="var(--color-accent-cyan)" />
           <InfoField icon={MapPin} label="Ubicación" value={predio?.municipio || 'Nextipac, Jalisco'} color="var(--color-accent-blue)" />
-          <InfoField icon={Calendar} label="Fecha de instalación" value={predio?.fecha_instalacion || 'Pendiente — junio 2026'} color="var(--color-accent-violet)" />
+          <InfoField icon={Calendar} label="Fecha de instalación" value={predio?.fecha_instalacion || 'Pendiente'} color="var(--color-accent-violet)" />
         </div>
       </div>
 
@@ -333,14 +333,6 @@ export default function PredioView({ predioId, onChangePredio, predios }) {
               </span>
             </div>
           ))}
-          <div
-            className="px-5 py-3 flex items-center justify-center cursor-pointer transition-colors"
-            style={{ color: 'var(--color-text-muted)' }}
-            onMouseEnter={e => { e.currentTarget.style.background = 'var(--color-surface-3)'; e.currentTarget.style.color = 'var(--color-text-secondary)' }}
-            onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--color-text-muted)' }}
-          >
-            <span className="text-xs font-medium">+ Agregar agrónomo</span>
-          </div>
         </div>
       </div>
 
@@ -381,7 +373,7 @@ export default function PredioView({ predioId, onChangePredio, predios }) {
       )}
 
       {/* Notes */}
-      <NotesSection predioId={predioId} />
+      <NotesSection predioId={predioId} userIniciales={user?.iniciales || 'ED'} />
 
       {/* System status */}
       <div className="animate-in stagger-6">

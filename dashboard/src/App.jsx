@@ -406,7 +406,7 @@ export default function App() {
           <div className="max-w-[1400px] mx-auto px-4 sm:px-6 py-6">
             <Routes>
               <Route path="/" element={<OverviewView predioId={predioId} />} />
-              <Route path="/predio" element={<PredioView predioId={predioId} onChangePredio={setPredioId} predios={predios} />} />
+              <Route path="/predio" element={<PredioView predioId={predioId} onChangePredio={setPredioId} predios={predios} user={user} />} />
               <Route path="/nodo" element={<NodoView predioId={predioId} />} />
               <Route path="/nodo/:id" element={<NodoView predioId={predioId} />} />
               <Route path="/firma" element={<FirmaView predioId={predioId} />} />

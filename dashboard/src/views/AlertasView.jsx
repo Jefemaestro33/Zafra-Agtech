@@ -333,20 +333,22 @@ function AlertaCard({ a, onUpdate, showRestore }) {
   const isCritical = a.tipo === 'alerta_phytophthora'
   const isPhyto = a.tipo === 'alerta_phytophthora'
 
+  const [diagError, setDiagError] = useState(null)
   const handleGenerarDiagnostico = async () => {
-    setLoadingDiag(true)
-    try { const r = await fetch(`/api/alertas/${a.id}/diagnostico`, { method: 'POST' }); const data = await r.json(); setLocalDiag(data.diagnostico); setExpanded(true) }
-    catch (e) { console.error(e) } finally { setLoadingDiag(false) }
+    setLoadingDiag(true); setDiagError(null)
+    try { const r = await fetch(`/api/alertas/${a.id}/diagnostico`, { method: 'POST' }); if (!r.ok) throw new Error('Error del servidor'); const data = await r.json(); setLocalDiag(data.diagnostico); setExpanded(true) }
+    catch (e) { setDiagError('No se pudo generar el diagnóstico. Verifica la conexión o la API de Claude.') } finally { setLoadingDiag(false) }
   }
   const handleEnviarAgronomo = () => {
     const d = diag || {}
     const text = [`*${config.label}* — ${a.nombre || `Nodo ${a.nodo_id}`}`, '', d.diagnostico ? `*DIAGNÓSTICO:* ${d.diagnostico}` : '', d.recomendacion_1 ? `*RECOMENDACIÓN 1:* ${d.recomendacion_1}` : '', d.recomendacion_2 ? `*RECOMENDACIÓN 2:* ${d.recomendacion_2}` : '', d.referencia ? `_Ref: ${d.referencia}_` : '', '', '_Diagnóstico IA. Verificar en campo._'].filter(Boolean).join('\n')
     navigator.clipboard.writeText(text).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000) })
   }
+  const [reporteError, setReporteError] = useState(null)
   const handleGenerarReporte = async () => {
-    setLoadingReporte(true)
-    try { const r = await fetch('/api/reportes/agricultor?predio_id=1', { method: 'POST' }); const data = await r.json(); setReporte(data.reporte); setExpanded(true) }
-    catch (e) { console.error(e) } finally { setLoadingReporte(false) }
+    setLoadingReporte(true); setReporteError(null)
+    try { const r = await fetch('/api/reportes/agricultor?predio_id=1', { method: 'POST' }); if (!r.ok) throw new Error('Error del servidor'); const data = await r.json(); setReporte(data.reporte); setExpanded(true) }
+    catch (e) { setReporteError('No se pudo generar el reporte.') } finally { setLoadingReporte(false) }
   }
   const handleHighlight = (reason) => {
     onUpdate({ ...a, datos: { ...a.datos, _destacada: true, _destacada_razon: reason, _destacada_fecha: new Date().toISOString(), _destacada_por: 'ED' } })
@@ -437,6 +439,9 @@ function AlertaCard({ a, onUpdate, showRestore }) {
                   {loadingDiag ? <><Loader2 size={14} className="animate-spin" />Generando...</> : <><BrainCircuit size={14} />Generar diagnóstico IA</>}
                 </button>
               )}
+              {diagError && (
+                <p className="text-xs px-3 py-2 rounded-lg" style={{ background: 'var(--color-glow-red)', color: 'var(--color-accent-red)', border: '1px solid rgba(239,68,68,0.2)' }}>{diagError}</p>
+              )}
 
               {reporte && (
                 <div className="px-4 py-3 rounded-xl" style={{ background: 'var(--color-glow-amber)', border: '1px solid rgba(245,158,11,0.2)' }}>
@@ -459,6 +464,9 @@ function AlertaCard({ a, onUpdate, showRestore }) {
                   {loadingReporte ? <Loader2 size={12} className="animate-spin" /> : <FileText size={12} />}{loadingReporte ? 'Generando...' : 'Generar reporte'}
                 </button>
               </div>
+              {reporteError && (
+                <p className="text-xs px-3 py-2 rounded-lg" style={{ background: 'var(--color-glow-red)', color: 'var(--color-accent-red)', border: '1px solid rgba(239,68,68,0.2)' }}>{reporteError}</p>
+              )}
             </div>
           </div>
         )}
