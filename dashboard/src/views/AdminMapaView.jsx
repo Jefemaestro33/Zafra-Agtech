@@ -44,7 +44,7 @@ function MapClickHandler({ onMapClick, active }) {
 
 export default function AdminMapaView({ predioId }) {
   const { data, loading, refetch } = useApi(`/api/predios/${predioId}/overview`)
-  const [tileMode, setTileMode] = useState('satelital')
+  const [tileMode, setTileMode] = useState('esri')
   const [selectedNodo, setSelectedNodo] = useState(null)
   const [saving, setSaving] = useState(null)
   const [toast, setToast] = useState(null)
