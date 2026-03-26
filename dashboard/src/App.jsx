@@ -22,6 +22,9 @@ import NuevoPredioView from './views/NuevoPredioView'
 import AdminPredioView from './views/AdminPredioView'
 import LoginView from './views/LoginView'
 import ConfigAlertasView from './views/ConfigAlertasView'
+import ConfigNotificacionesView from './views/ConfigNotificacionesView'
+import ConfigIntegracionesView from './views/ConfigIntegracionesView'
+import ConfigRespaldosView from './views/ConfigRespaldosView'
 
 const tabs = [
   { path: '/predio', label: 'Predio', icon: Info },
@@ -406,9 +409,9 @@ export default function App() {
               <Route path="/contabilidad" element={<ProximamenteView title="Contabilidad" description="Registro de gastos operativos, costos de laboratorio, hardware y mantenimiento por predio." icon={Receipt} />} />
               <Route path="/finanzas" element={<ProximamenteView title="Finanzas" description="Proyección de ingresos por predio, tracking del 30% de incremento de producción, y análisis de rentabilidad." icon={DollarSign} />} />
               <Route path="/config/alertas" element={<ConfigAlertasView />} />
-              <Route path="/config/notificaciones" element={<ProximamenteView title="Notificaciones" description="Configura cómo y dónde recibes alertas: email, WhatsApp, Telegram, o solo en el dashboard." icon={BellRing} />} />
-              <Route path="/config/integraciones" element={<ProximamenteView title="Integraciones" description="Administra API keys de Claude, tokens de Telegram, webhooks y conexiones con servicios externos." icon={Plug} />} />
-              <Route path="/config/respaldos" element={<ProximamenteView title="Respaldos" description="Backup y restore de la base de datos. Historial de respaldos automáticos y opción de descarga manual." icon={DatabaseBackup} />} />
+              <Route path="/config/notificaciones" element={<ConfigNotificacionesView />} />
+              <Route path="/config/integraciones" element={<ConfigIntegracionesView />} />
+              <Route path="/config/respaldos" element={<ConfigRespaldosView />} />
               <Route path="/docs" element={<ProximamenteView title="Documentación" description="Guías de uso del sistema, documentación técnica, y recursos de ayuda para el equipo." icon={BookOpen} />} />
             </Routes>
           </div>
