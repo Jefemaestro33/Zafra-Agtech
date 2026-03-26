@@ -20,112 +20,120 @@ function authHeaders() {
 const phytophthora_groups = [
   {
     key: 'h10',
-    label: 'Humedad 10 cm',
+    label: 'Humedad a 10 cm de profundidad',
+    desc: 'Zona de raices finas. Si supera estos umbrales de % VWC, suma puntos al score.',
     icon: Droplets,
     color: 'var(--color-accent-cyan)',
     fields: [
-      { key: 'h10_umbral_alto', label: 'Umbral alto (% VWC)', step: 1 },
-      { key: 'h10_umbral_medio', label: 'Umbral medio (% VWC)', step: 1 },
-      { key: 'h10_pts_alto', label: 'Puntos alto', step: 1 },
-      { key: 'h10_pts_medio', label: 'Puntos medio', step: 1 },
+      { key: 'h10_umbral_alto', label: 'Umbral alto — % VWC para riesgo alto', step: 1 },
+      { key: 'h10_pts_alto', label: 'Puntos que suma si supera umbral alto', step: 1 },
+      { key: 'h10_umbral_medio', label: 'Umbral medio — % VWC para riesgo medio', step: 1 },
+      { key: 'h10_pts_medio', label: 'Puntos que suma si supera umbral medio', step: 1 },
     ],
   },
   {
     key: 'h20',
-    label: 'Humedad 20 cm',
+    label: 'Humedad a 20 cm de profundidad',
+    desc: 'Zona de raices principales. Misma logica que a 10 cm.',
     icon: Droplets,
     color: 'var(--color-accent-blue)',
     fields: [
-      { key: 'h20_umbral_alto', label: 'Umbral alto (% VWC)', step: 1 },
-      { key: 'h20_umbral_medio', label: 'Umbral medio (% VWC)', step: 1 },
-      { key: 'h20_pts_alto', label: 'Puntos alto', step: 1 },
-      { key: 'h20_pts_medio', label: 'Puntos medio', step: 1 },
+      { key: 'h20_umbral_alto', label: 'Umbral alto — % VWC para riesgo alto', step: 1 },
+      { key: 'h20_pts_alto', label: 'Puntos que suma si supera umbral alto', step: 1 },
+      { key: 'h20_umbral_medio', label: 'Umbral medio — % VWC para riesgo medio', step: 1 },
+      { key: 'h20_pts_medio', label: 'Puntos que suma si supera umbral medio', step: 1 },
     ],
   },
   {
     key: 'temp',
-    label: 'Temperatura',
+    label: 'Temperatura del suelo a 20 cm',
+    desc: 'Rango optimo para Phytophthora cinnamomi. Dentro del rango = maximo riesgo.',
     icon: Thermometer,
     color: 'var(--color-accent-amber)',
     fields: [
-      { key: 'temp_min_optima', label: 'Min optima (C)', step: 1 },
-      { key: 'temp_max_optima', label: 'Max optima (C)', step: 1 },
-      { key: 'temp_pts_optimo', label: 'Puntos optimo', step: 1 },
-      { key: 'temp_min_riesgo', label: 'Min riesgo (C)', step: 1 },
-      { key: 'temp_pts_riesgo', label: 'Puntos riesgo', step: 1 },
+      { key: 'temp_min_optima', label: 'Limite inferior rango optimo — °C', step: 1 },
+      { key: 'temp_max_optima', label: 'Limite superior rango optimo — °C', step: 1 },
+      { key: 'temp_pts_optimo', label: 'Puntos si esta en rango optimo', step: 1 },
+      { key: 'temp_min_riesgo', label: 'Limite inferior rango de riesgo — °C', step: 1 },
+      { key: 'temp_pts_riesgo', label: 'Puntos si esta en rango de riesgo', step: 1 },
     ],
   },
   {
     key: 'horas',
-    label: 'Horas humedo',
+    label: 'Horas continuas con suelo humedo',
+    desc: 'Cuantas horas seguidas h10 supera el umbral VWC. Mas horas = mas riesgo de pudricion.',
     icon: Clock,
     color: 'var(--color-accent-violet)',
     fields: [
-      { key: 'horas_humedo_critico', label: 'Horas critico', step: 1 },
-      { key: 'horas_humedo_alto', label: 'Horas alto', step: 1 },
-      { key: 'horas_humedo_medio', label: 'Horas medio', step: 1 },
-      { key: 'horas_humedo_pts_critico', label: 'Puntos critico', step: 1 },
-      { key: 'horas_humedo_pts_alto', label: 'Puntos alto', step: 1 },
-      { key: 'horas_humedo_pts_medio', label: 'Puntos medio', step: 1 },
-      { key: 'umbral_vwc_humedo', label: 'Umbral VWC humedo (%)', step: 0.1 },
+      { key: 'umbral_vwc_humedo', label: 'Umbral de humedad — % VWC que se considera "humedo"', step: 0.1 },
+      { key: 'horas_humedo_critico', label: 'Horas para nivel critico', step: 1 },
+      { key: 'horas_humedo_pts_critico', label: 'Puntos si supera horas criticas', step: 1 },
+      { key: 'horas_humedo_alto', label: 'Horas para nivel alto', step: 1 },
+      { key: 'horas_humedo_pts_alto', label: 'Puntos si supera horas altas', step: 1 },
+      { key: 'horas_humedo_medio', label: 'Horas para nivel medio', step: 1 },
+      { key: 'horas_humedo_pts_medio', label: 'Puntos si supera horas medias', step: 1 },
     ],
   },
   {
     key: 'precip',
-    label: 'Precipitacion 7d',
+    label: 'Precipitacion acumulada (ultimos 7 dias)',
+    desc: 'Lluvia total en la ultima semana. Mas lluvia = suelo mas saturado.',
     icon: CloudRain,
     color: 'var(--color-accent-cyan)',
     fields: [
-      { key: 'precip_7d_alto', label: 'Acumulada alta (mm)', step: 1 },
-      { key: 'precip_7d_medio', label: 'Acumulada media (mm)', step: 1 },
-      { key: 'precip_7d_pts_alto', label: 'Puntos alto', step: 1 },
-      { key: 'precip_7d_pts_medio', label: 'Puntos medio', step: 1 },
+      { key: 'precip_7d_alto', label: 'Umbral alto — mm acumulados en 7 dias', step: 1 },
+      { key: 'precip_7d_pts_alto', label: 'Puntos si supera umbral alto', step: 1 },
+      { key: 'precip_7d_medio', label: 'Umbral medio — mm acumulados en 7 dias', step: 1 },
+      { key: 'precip_7d_pts_medio', label: 'Puntos si supera umbral medio', step: 1 },
     ],
   },
   {
     key: 'pronostico',
-    label: 'Pronostico 48h',
+    label: 'Pronostico de lluvia (proximas 48 horas)',
+    desc: 'Si se espera lluvia fuerte en las proximas 48h, suma puntos preventivamente.',
     icon: CloudSun,
     color: 'var(--color-accent-green)',
     fields: [
-      { key: 'pronostico_48h_umbral', label: 'Umbral precipitacion (mm)', step: 1 },
-      { key: 'pronostico_48h_pts', label: 'Puntos', step: 1 },
+      { key: 'pronostico_48h_umbral', label: 'Umbral — mm esperados en proximas 48h', step: 1 },
+      { key: 'pronostico_48h_pts', label: 'Puntos si supera el umbral', step: 1 },
     ],
   },
   {
     key: 'hr',
-    label: 'HR ambiente',
+    label: 'Humedad relativa ambiente (promedio 48h)',
+    desc: 'HR promedio del aire en las ultimas 48 horas. HR alta dificulta evaporacion.',
     icon: Wind,
     color: 'var(--color-accent-blue)',
     fields: [
-      { key: 'hr_48h_umbral', label: 'Umbral HR (%)', step: 1 },
-      { key: 'hr_48h_pts', label: 'Puntos', step: 1 },
+      { key: 'hr_48h_umbral', label: 'Umbral — % de humedad relativa', step: 1 },
+      { key: 'hr_48h_pts', label: 'Puntos si supera el umbral', step: 1 },
     ],
   },
   {
     key: 'niveles',
-    label: 'Niveles de riesgo',
+    label: 'Clasificacion de niveles de riesgo',
+    desc: 'Score total (0-100). Define los cortes para CRITICO, ALTO, MODERADO y BAJO.',
     icon: AlertTriangle,
     color: 'var(--color-accent-red)',
     fields: [
-      { key: 'nivel_critico', label: 'Score critico (>=)', step: 1 },
-      { key: 'nivel_alto', label: 'Score alto (>=)', step: 1 },
-      { key: 'nivel_moderado', label: 'Score moderado (>=)', step: 1 },
+      { key: 'nivel_critico', label: 'Score minimo para CRITICO (rojo)', step: 1 },
+      { key: 'nivel_alto', label: 'Score minimo para ALTO (naranja)', step: 1 },
+      { key: 'nivel_moderado', label: 'Score minimo para MODERADO (amarillo)', step: 1 },
     ],
   },
 ]
 
 const riego_fields = [
-  { key: 'breaking_point_vwc', label: 'Breaking point VWC (%)', step: 0.1 },
-  { key: 'lecturas_consecutivas', label: 'Lecturas consecutivas', step: 1 },
+  { key: 'breaking_point_vwc', label: 'Breaking point — % VWC debajo del cual el arbol necesita riego', step: 0.1 },
+  { key: 'lecturas_consecutivas', label: 'Lecturas consecutivas bajo el breaking point antes de alertar (1 lectura = 5 min)', step: 1 },
 ]
 
 const offline_fields = [
-  { key: 'minutos_sin_datos', label: 'Minutos sin datos', step: 1 },
+  { key: 'minutos_sin_datos', label: 'Tiempo sin recibir datos antes de marcar como offline (minutos)', step: 1 },
 ]
 
 const bateria_fields = [
-  { key: 'voltaje_minimo', label: 'Voltaje minimo (V)', step: 0.1 },
+  { key: 'voltaje_minimo', label: 'Voltaje minimo antes de alerta de bateria baja (Volts)', step: 0.1 },
 ]
 
 // ── Reusable components ──
@@ -216,7 +224,7 @@ function FieldRow({ label, value, step, onChange }) {
   )
 }
 
-function CollapsibleGroup({ label, icon: Icon, color, fields, values, onChange, defaultOpen = false }) {
+function CollapsibleGroup({ label, desc, icon: Icon, color, fields, values, onChange, defaultOpen = false }) {
   const [open, setOpen] = useState(defaultOpen)
   return (
     <div
@@ -230,16 +238,21 @@ function CollapsibleGroup({ label, icon: Icon, color, fields, values, onChange, 
         onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
       >
         <Icon size={16} style={{ color }} />
-        <span className="text-sm font-medium flex-1 text-left" style={{ color: 'var(--color-text-primary)' }}>
-          {label}
-        </span>
-        <span className="text-[10px] font-mono" style={{ color: 'var(--color-text-muted)' }}>
-          {fields.length} campos
-        </span>
+        <div className="flex-1 text-left">
+          <span className="text-sm font-medium" style={{ color: 'var(--color-text-primary)' }}>
+            {label}
+          </span>
+          {desc && !open && (
+            <p className="text-[10px] mt-0.5" style={{ color: 'var(--color-text-muted)' }}>{desc}</p>
+          )}
+        </div>
         {open ? <ChevronDown size={14} style={{ color: 'var(--color-text-muted)' }} /> : <ChevronRight size={14} style={{ color: 'var(--color-text-muted)' }} />}
       </button>
       {open && (
         <div className="px-4 pb-3" style={{ borderTop: '1px solid var(--color-border)' }}>
+          {desc && (
+            <p className="text-[11px] py-2 mb-1" style={{ color: 'var(--color-text-muted)' }}>{desc}</p>
+          )}
           {fields.map(f => (
             <FieldRow
               key={f.key}
@@ -430,6 +443,7 @@ export default function ConfigAlertasView() {
             <CollapsibleGroup
               key={g.key}
               label={g.label}
+              desc={g.desc}
               icon={g.icon}
               color={g.color}
               fields={g.fields}
@@ -449,6 +463,9 @@ export default function ConfigAlertasView() {
         saving={saving.riego}
         onSave={() => saveSection('riego')}
       >
+        <p className="text-[11px] mb-3 px-1" style={{ color: 'var(--color-text-muted)' }}>
+          Determina cuando un nodo genera alerta de "necesita riego". El breaking point es el porcentaje de humedad debajo del cual el arbol empieza a sufrir estres hidrico.
+        </p>
         <div className="space-y-0" style={{ paddingLeft: 4, paddingRight: 4 }}>
           {riego_fields.map(f => (
             <FieldRow
@@ -471,6 +488,9 @@ export default function ConfigAlertasView() {
         saving={saving.offline}
         onSave={() => saveSection('offline')}
       >
+        <p className="text-[11px] mb-3 px-1" style={{ color: 'var(--color-text-muted)' }}>
+          Si un nodo deja de enviar datos por mas de este tiempo, se marca como offline. Los nodos envian datos cada 5 minutos, asi que 30 min = 6 lecturas perdidas.
+        </p>
         <div className="space-y-0" style={{ paddingLeft: 4, paddingRight: 4 }}>
           {offline_fields.map(f => (
             <FieldRow
@@ -493,6 +513,9 @@ export default function ConfigAlertasView() {
         saving={saving.bateria}
         onSave={() => saveSection('bateria')}
       >
+        <p className="text-[11px] mb-3 px-1" style={{ color: 'var(--color-text-muted)' }}>
+          Alerta cuando el voltaje de la bateria del nodo cae debajo del minimo. A 3.3V quedan aprox 1-2 dias de autonomia antes de apagarse.
+        </p>
         <div className="space-y-0" style={{ paddingLeft: 4, paddingRight: 4 }}>
           {bateria_fields.map(f => (
             <FieldRow
