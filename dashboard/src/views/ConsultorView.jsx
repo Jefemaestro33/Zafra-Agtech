@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { MessageCircleQuestion, Send, Loader2, LayoutDashboard, Radio, Droplets, GitCompareArrows, CloudSun, Trash2, Bot, User } from 'lucide-react'
 import { useApi } from '../hooks/useApi'
 
@@ -46,11 +46,31 @@ function MessageBubble({ msg }) {
   )
 }
 
+const STORAGE_KEY = 'agtech_consultor_'
+
 export default function ConsultorView({ predioId }) {
   const [selectedSection, setSelectedSection] = useState(null)
-  const [messages, setMessages] = useState([])
+  const [messages, setMessages] = useState(() => {
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY + predioId)
+      return stored ? JSON.parse(stored) : []
+    } catch { return [] }
+  })
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
+
+  // Persist messages on change
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY + predioId, JSON.stringify(messages))
+  }, [messages, predioId])
+
+  // Reload when predioId changes
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY + predioId)
+      setMessages(stored ? JSON.parse(stored) : [])
+    } catch { setMessages([]) }
+  }, [predioId])
 
   const { data: overview } = useApi(`/api/predios/${predioId}/overview`)
   const { data: firma } = useApi(`/api/predios/${predioId}/firma`)
@@ -135,6 +155,7 @@ export default function ConsultorView({ predioId }) {
   const handleClear = () => {
     setMessages([])
     setSelectedSection(null)
+    localStorage.removeItem(STORAGE_KEY + predioId)
   }
 
   return (
