@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useApi } from '../hooks/useApi'
-import { MapPin, Sprout, Mountain, Ruler, Calendar, Server, Database, Cpu, Wifi, Clock, ChevronDown, Pencil, Check, X, AlertTriangle, StickyNote, Save, Trash2, Plus } from 'lucide-react'
+import { MapPin, Sprout, Mountain, Ruler, Calendar, Server, Database, Cpu, Wifi, Clock, ChevronDown, AlertTriangle, StickyNote, Trash2, Plus } from 'lucide-react'
 import Loading from '../components/Loading'
 
 function ConfirmModal({ open, title, message, onConfirm, onCancel }) {
@@ -34,7 +34,7 @@ function ConfirmModal({ open, title, message, onConfirm, onCancel }) {
             className="px-4 py-2 text-sm rounded-xl font-medium transition-colors"
             style={{ background: 'var(--color-accent-green-dim)', color: 'var(--color-accent-green)', border: '1px solid rgba(16,185,129,0.3)' }}
           >
-            Confirmar cambio
+            Confirmar
           </button>
         </div>
       </div>
@@ -42,7 +42,7 @@ function ConfirmModal({ open, title, message, onConfirm, onCancel }) {
   )
 }
 
-function ReadOnlyField({ icon: Icon, label, value, color = 'var(--color-accent-green)' }) {
+function InfoField({ icon: Icon, label, value, color = 'var(--color-accent-green)' }) {
   return (
     <div
       className="flex items-center gap-4 px-4 py-3.5 rounded-xl transition-colors"
@@ -61,107 +61,6 @@ function ReadOnlyField({ icon: Icon, label, value, color = 'var(--color-accent-g
         <p className="text-sm font-semibold mt-0.5" style={{ color: 'var(--color-text-primary)' }}>{value || '—'}</p>
       </div>
     </div>
-  )
-}
-
-function EditableField({ icon: Icon, label, value, fieldKey, color = 'var(--color-accent-green)', onSave, canEdit = false }) {
-  const [editing, setEditing] = useState(false)
-  const [draft, setDraft] = useState(value || '')
-  const [showConfirm, setShowConfirm] = useState(false)
-
-  useEffect(() => { setDraft(value || '') }, [value])
-
-  if (!canEdit) {
-    return <ReadOnlyField icon={Icon} label={label} value={value} color={color} />
-  }
-
-  const handleSave = () => {
-    if (draft !== value) {
-      setShowConfirm(true)
-    } else {
-      setEditing(false)
-    }
-  }
-
-  const handleConfirm = () => {
-    onSave(fieldKey, draft)
-    setShowConfirm(false)
-    setEditing(false)
-  }
-
-  return (
-    <>
-      <ConfirmModal
-        open={showConfirm}
-        title="Confirmar cambio"
-        message={`¿Cambiar "${label}" de "${value || '—'}" a "${draft}"?`}
-        onConfirm={handleConfirm}
-        onCancel={() => setShowConfirm(false)}
-      />
-      <div
-        className="flex items-center gap-4 px-4 py-3.5 rounded-xl transition-colors group"
-        style={{ background: editing ? 'var(--color-surface-3)' : 'var(--color-surface-2)', border: '1px solid var(--color-border)' }}
-        onMouseEnter={e => { if (!editing) e.currentTarget.style.background = 'var(--color-surface-3)' }}
-        onMouseLeave={e => { if (!editing) e.currentTarget.style.background = 'var(--color-surface-2)' }}
-      >
-        <div
-          className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-          style={{ background: `${color}15`, border: `1px solid ${color}30` }}
-        >
-          <Icon size={18} style={{ color }} />
-        </div>
-        <div className="min-w-0 flex-1">
-          <p className="text-[11px] font-medium" style={{ color: 'var(--color-text-muted)' }}>{label}</p>
-          {editing ? (
-            <input
-              value={draft}
-              onChange={e => setDraft(e.target.value)}
-              className="w-full bg-transparent text-sm font-semibold mt-0.5 outline-none"
-              style={{ color: 'var(--color-text-primary)', borderBottom: `1px solid var(--color-accent-green)`, paddingBottom: 2 }}
-              autoFocus
-              onKeyDown={e => { if (e.key === 'Enter') handleSave(); if (e.key === 'Escape') { setDraft(value || ''); setEditing(false) } }}
-            />
-          ) : (
-            <p className="text-sm font-semibold mt-0.5" style={{ color: 'var(--color-text-primary)' }}>{value || '—'}</p>
-          )}
-        </div>
-        {editing ? (
-          <div className="flex gap-1 shrink-0">
-            <button
-              onClick={handleSave}
-              className="p-1.5 rounded-lg transition-colors"
-              style={{ color: 'var(--color-accent-green)' }}
-              onMouseEnter={e => e.currentTarget.style.background = 'var(--color-glow-green)'}
-              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-              title="Guardar"
-            >
-              <Check size={16} />
-            </button>
-            <button
-              onClick={() => { setDraft(value || ''); setEditing(false) }}
-              className="p-1.5 rounded-lg transition-colors"
-              style={{ color: 'var(--color-text-muted)' }}
-              onMouseEnter={e => e.currentTarget.style.background = 'var(--color-surface-4)'}
-              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-              title="Cancelar"
-            >
-              <X size={16} />
-            </button>
-          </div>
-        ) : (
-          <button
-            onClick={() => setEditing(true)}
-            className="p-1.5 rounded-lg transition-all opacity-0 group-hover:opacity-100 shrink-0"
-            style={{ color: 'var(--color-text-muted)' }}
-            onMouseEnter={e => e.currentTarget.style.background = 'var(--color-surface-4)'}
-            onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-            title="Editar"
-          >
-            <Pencil size={14} />
-          </button>
-        )}
-      </div>
-    </>
   )
 }
 
@@ -318,35 +217,14 @@ function NotesSection({ predioId }) {
   )
 }
 
-export default function PredioView({ predioId, onChangePredio, predios, user }) {
-  const isAdmin = user?.rol === 'admin'
-  const { data: overview, loading, refetch } = useApi(`/api/predios/${predioId}/overview`)
+export default function PredioView({ predioId, onChangePredio, predios }) {
+  const { data: overview, loading } = useApi(`/api/predios/${predioId}/overview`)
   const { data: health } = useApi('/api/health')
-  const [saveStatus, setSaveStatus] = useState(null)
 
   if (loading) return <Loading />
 
   const predio = overview?.predio || predios?.find(p => p.predio_id === predioId)
   const kpis = overview?.kpis
-
-  const handleFieldSave = async (fieldKey, newValue) => {
-    try {
-      const res = await fetch(`/api/predios/${predioId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ [fieldKey]: newValue }),
-      })
-      if (res.ok) {
-        setSaveStatus({ type: 'success', message: 'Cambio guardado' })
-        refetch()
-      } else {
-        setSaveStatus({ type: 'error', message: 'Error al guardar — el endpoint PUT puede no existir todavía' })
-      }
-    } catch {
-      setSaveStatus({ type: 'error', message: 'Error de conexión' })
-    }
-    setTimeout(() => setSaveStatus(null), 3000)
-  }
 
   return (
     <div className="space-y-6">
@@ -360,18 +238,6 @@ export default function PredioView({ predioId, onChangePredio, predios, user }) 
             Configuración, datos del predio y estado del sistema
           </p>
         </div>
-        {saveStatus && (
-          <span
-            className="text-xs px-3 py-1.5 rounded-lg font-medium animate-in"
-            style={{
-              background: saveStatus.type === 'success' ? 'var(--color-glow-green)' : 'var(--color-glow-red)',
-              color: saveStatus.type === 'success' ? 'var(--color-accent-green)' : 'var(--color-accent-red)',
-              border: `1px solid ${saveStatus.type === 'success' ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)'}`,
-            }}
-          >
-            {saveStatus.message}
-          </span>
-        )}
       </div>
 
       {/* Predio selector */}
@@ -411,19 +277,14 @@ export default function PredioView({ predioId, onChangePredio, predios, user }) 
           <p className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: 'var(--color-text-muted)' }}>
             Datos del predio
           </p>
-          {isAdmin && (
-            <p className="text-[11px]" style={{ color: 'var(--color-text-muted)' }}>
-              Hover sobre un campo para editar
-            </p>
-          )}
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <EditableField icon={MapPin} label="Nombre" value={predio?.nombre || 'Nextipac Piloto'} fieldKey="nombre" onSave={handleFieldSave} canEdit={isAdmin} />
-          <EditableField icon={Sprout} label="Cultivo" value={predio?.cultivo || 'Aguacate Hass'} fieldKey="cultivo" color="var(--color-accent-green)" onSave={handleFieldSave} canEdit={isAdmin} />
-          <EditableField icon={Mountain} label="Tipo de suelo" value={predio?.tipo_suelo || 'Andisol volcánico'} fieldKey="tipo_suelo" color="var(--color-accent-amber)" onSave={handleFieldSave} canEdit={isAdmin} />
-          <EditableField icon={Ruler} label="Superficie" value={`${predio?.hectareas || 4} hectáreas`} fieldKey="hectareas" color="var(--color-accent-cyan)" onSave={handleFieldSave} canEdit={isAdmin} />
-          <EditableField icon={MapPin} label="Ubicación" value={predio?.municipio || 'Nextipac, Jalisco'} fieldKey="municipio" color="var(--color-accent-blue)" onSave={handleFieldSave} canEdit={isAdmin} />
-          <EditableField icon={Calendar} label="Fecha de instalación" value={predio?.fecha_instalacion || 'Pendiente — junio 2026'} fieldKey="fecha_instalacion" color="var(--color-accent-violet)" onSave={handleFieldSave} canEdit={isAdmin} />
+          <InfoField icon={MapPin} label="Nombre" value={predio?.nombre || 'Nextipac Piloto'} />
+          <InfoField icon={Sprout} label="Cultivo" value={predio?.cultivo || 'Aguacate Hass'} color="var(--color-accent-green)" />
+          <InfoField icon={Mountain} label="Tipo de suelo" value={predio?.tipo_suelo || 'Andisol volcánico'} color="var(--color-accent-amber)" />
+          <InfoField icon={Ruler} label="Superficie" value={`${predio?.hectareas || 4} hectáreas`} color="var(--color-accent-cyan)" />
+          <InfoField icon={MapPin} label="Ubicación" value={predio?.municipio || 'Nextipac, Jalisco'} color="var(--color-accent-blue)" />
+          <InfoField icon={Calendar} label="Fecha de instalación" value={predio?.fecha_instalacion || 'Pendiente — junio 2026'} color="var(--color-accent-violet)" />
         </div>
       </div>
 
