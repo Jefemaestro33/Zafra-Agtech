@@ -329,13 +329,13 @@ export default function App() {
                   )
                 })}
               </nav>
-              <div className="mt-auto pb-4 flex justify-center relative">
+              <div className="mt-auto pb-4 flex justify-center">
                 {profileMenuOpen && (
                   <>
-                    <div className="fixed inset-0 z-30" onClick={() => setProfileMenuOpen(false)} />
+                    <div className="fixed inset-0 z-[60]" onClick={() => setProfileMenuOpen(false)} />
                     <div
-                      className="absolute bottom-full left-1 mb-2 rounded-2xl py-2 z-40 animate-in shadow-2xl"
-                      style={{ background: 'var(--color-surface-3)', border: '1px solid var(--color-border-light)', width: 220 }}
+                      className="fixed rounded-2xl py-2 z-[70] animate-in shadow-2xl"
+                      style={{ background: 'var(--color-surface-3)', border: '1px solid var(--color-border-light)', width: 220, bottom: 60, left: 8 }}
                     >
                       <div className="px-4 py-2 mb-1" style={{ borderBottom: '1px solid var(--color-border)' }}>
                         <p className="text-xs font-bold" style={{ color: 'var(--color-text-primary)' }}>{user.nombre}</p>
