@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react'
-import { MapContainer, TileLayer, CircleMarker, Marker, Popup, useMapEvents } from 'react-leaflet'
+import { MapContainer, TileLayer, CircleMarker, Popup, useMapEvents } from 'react-leaflet'
 import { useApi } from '../hooks/useApi'
 import { getToken } from '../hooks/useAuth'
 import {
-  Save, Loader2, Check, X, Radio, Satellite, Map, MousePointer, GripVertical, Globe,
+  Save, Loader2, Check, X, Radio, Satellite, Map as MapIcon, MousePointer, Globe,
 } from 'lucide-react'
 import Loading from '../components/Loading'
 
@@ -245,7 +245,7 @@ export default function AdminMapaView({ predioId }) {
             {[
               { key: 'esri', label: 'Esri', Icon: Satellite },
               { key: 'google', label: 'Google', Icon: Globe },
-              { key: 'mapa', label: 'Mapa', Icon: Map },
+              { key: 'mapa', label: 'Mapa', Icon: MapIcon },
             ].map(m => (
               <button
                 key={m.key}
