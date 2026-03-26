@@ -1,6 +1,11 @@
-import { useState, useEffect } from 'react'
-import { MessageCircleQuestion, Send, Loader2, LayoutDashboard, Radio, Droplets, GitCompareArrows, CloudSun, Trash2, Bot, User } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
+import {
+  MessageCircleQuestion, Send, Loader2, LayoutDashboard, Radio, Droplets,
+  GitCompareArrows, CloudSun, Trash2, Bot, User, Plus, ChevronLeft, Clock,
+  MessageSquare,
+} from 'lucide-react'
 import { useApi } from '../hooks/useApi'
+import { getToken } from '../hooks/useAuth'
 
 const secciones = [
   { key: 'overview', label: 'Overview general', icon: LayoutDashboard, prompt: 'Analiza el estado general del predio basándote en los KPIs de overview: nodos online, score Phytophthora máximo, nodos que necesitan riego y ETo del día.' },
@@ -9,6 +14,36 @@ const secciones = [
   { key: 'comparativo', label: 'Comparativo (CUSUM)', icon: GitCompareArrows, prompt: 'Analiza el análisis comparativo CUSUM entre nodos de tratamiento y testigo: divergencias detectadas, deltas de humedad y tendencias por bloque.' },
   { key: 'clima', label: 'Clima', icon: CloudSun, prompt: 'Interpreta los datos climáticos del predio: temperatura ambiente, precipitación acumulada, humedad relativa y evapotranspiración (ETo) calculada con Penman-Monteith.' },
 ]
+
+const STORAGE_KEY = 'agtech_consultas_'
+
+function loadConsultas(predioId) {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY + predioId)
+    return stored ? JSON.parse(stored) : []
+  } catch { return [] }
+}
+
+function saveConsultas(predioId, consultas) {
+  localStorage.setItem(STORAGE_KEY + predioId, JSON.stringify(consultas))
+}
+
+function generateTitle(messages) {
+  const first = messages.find(m => m.role === 'user')
+  if (!first) return 'Nueva consulta'
+  const text = first.content
+  return text.length > 50 ? text.slice(0, 50) + '...' : text
+}
+
+function formatDate(iso) {
+  const d = new Date(iso)
+  const now = new Date()
+  const diff = now - d
+  if (diff < 60000) return 'Ahora'
+  if (diff < 3600000) return `hace ${Math.floor(diff / 60000)} min`
+  if (diff < 86400000) return `hace ${Math.floor(diff / 3600000)}h`
+  return d.toLocaleDateString('es-MX', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
+}
 
 function MessageBubble({ msg }) {
   const isUser = msg.role === 'user'
@@ -46,36 +81,60 @@ function MessageBubble({ msg }) {
   )
 }
 
-const STORAGE_KEY = 'agtech_consultor_'
-
 export default function ConsultorView({ predioId }) {
+  const [consultas, setConsultas] = useState(() => loadConsultas(predioId))
+  const [activeId, setActiveId] = useState(null) // null = new chat, string = viewing existing
   const [selectedSection, setSelectedSection] = useState(null)
-  const [messages, setMessages] = useState(() => {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY + predioId)
-      return stored ? JSON.parse(stored) : []
-    } catch { return [] }
-  })
+  const [messages, setMessages] = useState([])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
-
-  // Persist messages on change
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEY + predioId, JSON.stringify(messages))
-  }, [messages, predioId])
-
-  // Reload when predioId changes
-  useEffect(() => {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY + predioId)
-      setMessages(stored ? JSON.parse(stored) : [])
-    } catch { setMessages([]) }
-  }, [predioId])
+  const [showHistory, setShowHistory] = useState(false)
+  const messagesEndRef = useRef(null)
 
   const { data: overview } = useApi(`/api/predios/${predioId}/overview`)
   const { data: firma } = useApi(`/api/predios/${predioId}/firma`)
   const { data: comparativo } = useApi(`/api/predios/${predioId}/comparativo?dias=30`)
   const { data: clima } = useApi('/api/clima/actual')
+
+  // Reload consultas when predioId changes
+  useEffect(() => {
+    const loaded = loadConsultas(predioId)
+    setConsultas(loaded)
+    setActiveId(null)
+    setMessages([])
+    setSelectedSection(null)
+  }, [predioId])
+
+  // Load messages when selecting a consulta
+  useEffect(() => {
+    if (activeId) {
+      const c = consultas.find(c => c.id === activeId)
+      if (c) {
+        setMessages(c.messages)
+        setSelectedSection(c.section || null)
+      }
+    }
+  }, [activeId])
+
+  // Auto-scroll to bottom
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages, loading])
+
+  const persistConsulta = (msgs, section) => {
+    const now = new Date().toISOString()
+    let updated
+    if (activeId) {
+      updated = consultas.map(c => c.id === activeId ? { ...c, messages: msgs, updatedAt: now, title: generateTitle(msgs) } : c)
+    } else {
+      const newId = Date.now().toString()
+      const newConsulta = { id: newId, title: generateTitle(msgs), section, messages: msgs, createdAt: now, updatedAt: now }
+      updated = [newConsulta, ...consultas]
+      setActiveId(newId)
+    }
+    setConsultas(updated)
+    saveConsultas(predioId, updated)
+  }
 
   const buildContext = (sectionKey) => {
     let ctx = ''
@@ -108,25 +167,28 @@ export default function ConsultorView({ predioId }) {
 
     const sectionConfig = selectedSection ? secciones.find(s => s.key === selectedSection) : null
     const userMessage = input.trim() || (sectionConfig ? `Analiza la sección "${sectionConfig.label}" y dame tu interpretación.` : '')
-
     if (!userMessage) return
 
     const userMsg = { role: 'user', content: userMessage, timestamp: new Date().toISOString() }
-    setMessages(prev => [...prev, userMsg])
+    const newMsgs = [...messages, userMsg]
+    setMessages(newMsgs)
     setInput('')
     setLoading(true)
 
     try {
       const context = selectedSection ? buildContext(selectedSection) : ''
       const systemPrompt = sectionConfig?.prompt || 'Eres un consultor experto en agricultura de aguacate Hass. Responde preguntas técnicas sobre los datos de sensores IoT del predio.'
-
       const fullPrompt = context
         ? `${systemPrompt}\n\nDATOS ACTUALES DEL SISTEMA:\n${context}\n\nPREGUNTA DEL USUARIO:\n${userMessage}`
         : `${systemPrompt}\n\nPREGUNTA DEL USUARIO:\n${userMessage}`
 
+      const headers = { 'Content-Type': 'application/json' }
+      const token = getToken()
+      if (token) headers['Authorization'] = `Bearer ${token}`
+
       const res = await fetch('/api/alertas/1/diagnostico', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({ prompt_override: fullPrompt }),
       })
 
@@ -144,148 +206,278 @@ export default function ConsultorView({ predioId }) {
       }
 
       const aiMsg = { role: 'assistant', content: aiContent, timestamp: new Date().toISOString(), section: sectionConfig?.label }
-      setMessages(prev => [...prev, aiMsg])
+      const finalMsgs = [...newMsgs, aiMsg]
+      setMessages(finalMsgs)
+      persistConsulta(finalMsgs, selectedSection)
     } catch (e) {
-      setMessages(prev => [...prev, { role: 'assistant', content: `Error de conexión: ${e.message}`, timestamp: new Date().toISOString() }])
+      const errMsg = { role: 'assistant', content: `Error de conexión: ${e.message}`, timestamp: new Date().toISOString() }
+      const finalMsgs = [...newMsgs, errMsg]
+      setMessages(finalMsgs)
+      persistConsulta(finalMsgs, selectedSection)
     } finally {
       setLoading(false)
     }
   }
 
-  const handleClear = () => {
+  const handleNewChat = () => {
+    setActiveId(null)
     setMessages([])
     setSelectedSection(null)
-    localStorage.removeItem(STORAGE_KEY + predioId)
+    setInput('')
+    setShowHistory(false)
   }
+
+  const handleSelectConsulta = (id) => {
+    setActiveId(id)
+    setShowHistory(false)
+  }
+
+  const handleDeleteConsulta = (e, id) => {
+    e.stopPropagation()
+    const updated = consultas.filter(c => c.id !== id)
+    setConsultas(updated)
+    saveConsultas(predioId, updated)
+    if (activeId === id) {
+      setActiveId(null)
+      setMessages([])
+    }
+  }
+
+  const activeConsulta = activeId ? consultas.find(c => c.id === activeId) : null
+  const isViewingHistory = activeId && messages.length > 0
 
   return (
     <div className="space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between animate-in">
-        <div>
-          <h2 className="text-lg font-bold" style={{ color: 'var(--color-text-primary)' }}>Consultor IA</h2>
-          <p className="text-sm mt-1" style={{ color: 'var(--color-text-muted)' }}>
-            Selecciona una sección y haz preguntas sobre tus datos
-          </p>
+        <div className="flex items-center gap-3">
+          {isViewingHistory && (
+            <button
+              onClick={handleNewChat}
+              className="p-2 rounded-xl transition-colors"
+              style={{ background: 'var(--color-surface-2)', border: '1px solid var(--color-border)', color: 'var(--color-text-muted)' }}
+              onMouseEnter={e => e.currentTarget.style.background = 'var(--color-surface-3)'}
+              onMouseLeave={e => e.currentTarget.style.background = 'var(--color-surface-2)'}
+              title="Nueva consulta"
+            >
+              <ChevronLeft size={16} />
+            </button>
+          )}
+          <div>
+            <h2 className="text-lg font-bold" style={{ color: 'var(--color-text-primary)' }}>
+              {isViewingHistory ? activeConsulta?.title || 'Consulta' : 'Consultor IA'}
+            </h2>
+            <p className="text-sm mt-0.5" style={{ color: 'var(--color-text-muted)' }}>
+              {isViewingHistory
+                ? formatDate(activeConsulta?.createdAt)
+                : `${consultas.length} consulta${consultas.length !== 1 ? 's' : ''} guardada${consultas.length !== 1 ? 's' : ''}`}
+            </p>
+          </div>
         </div>
-        {messages.length > 0 && (
+        <div className="flex items-center gap-2">
+          {consultas.length > 0 && (
+            <button
+              onClick={() => setShowHistory(!showHistory)}
+              className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg font-medium transition-colors"
+              style={{
+                background: showHistory ? 'var(--color-accent-green-dim)' : 'var(--color-surface-3)',
+                color: showHistory ? 'var(--color-accent-green)' : 'var(--color-text-muted)',
+                border: `1px solid ${showHistory ? 'rgba(16,185,129,0.3)' : 'var(--color-border)'}`,
+              }}
+              onMouseEnter={e => { if (!showHistory) { e.currentTarget.style.background = 'var(--color-surface-4)' } }}
+              onMouseLeave={e => { if (!showHistory) { e.currentTarget.style.background = 'var(--color-surface-3)' } }}
+            >
+              <Clock size={12} /> Historial
+            </button>
+          )}
           <button
-            onClick={handleClear}
+            onClick={handleNewChat}
             className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg font-medium transition-colors"
-            style={{ background: 'var(--color-surface-3)', color: 'var(--color-text-muted)', border: '1px solid var(--color-border)' }}
-            onMouseEnter={e => { e.currentTarget.style.background = 'var(--color-glow-red)'; e.currentTarget.style.color = 'var(--color-accent-red)' }}
-            onMouseLeave={e => { e.currentTarget.style.background = 'var(--color-surface-3)'; e.currentTarget.style.color = 'var(--color-text-muted)' }}
+            style={{ background: 'var(--color-accent-green-dim)', color: 'var(--color-accent-green)', border: '1px solid rgba(16,185,129,0.3)' }}
+            onMouseEnter={e => e.currentTarget.style.boxShadow = '0 0 12px rgba(16,185,129,0.2)'}
+            onMouseLeave={e => e.currentTarget.style.boxShadow = 'none'}
           >
-            <Trash2 size={12} /> Limpiar chat
+            <Plus size={12} /> Nueva consulta
           </button>
-        )}
+        </div>
       </div>
+
+      {/* History panel */}
+      {showHistory && (
+        <div
+          className="rounded-2xl overflow-hidden animate-in"
+          style={{ background: 'var(--color-surface-2)', border: '1px solid var(--color-border)', maxHeight: 320, overflowY: 'auto' }}
+        >
+          <div className="p-3">
+            <p className="text-[10px] font-semibold uppercase tracking-widest mb-2 px-1" style={{ color: 'var(--color-text-muted)' }}>
+              Consultas anteriores ({consultas.length})
+            </p>
+            <div className="space-y-1">
+              {consultas.map(c => {
+                const isActive = activeId === c.id
+                const msgCount = c.messages.filter(m => m.role === 'user').length
+                const sectionLabel = c.section ? secciones.find(s => s.key === c.section)?.label : null
+                return (
+                  <div
+                    key={c.id}
+                    onClick={() => handleSelectConsulta(c.id)}
+                    className="flex items-center gap-3 px-3 py-2.5 rounded-xl cursor-pointer transition-all duration-200 group"
+                    style={{
+                      background: isActive ? 'var(--color-accent-green-dim)' : 'transparent',
+                      border: isActive ? '1px solid rgba(16,185,129,0.2)' : '1px solid transparent',
+                    }}
+                    onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = 'var(--color-surface-3)' }}
+                    onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = 'transparent' }}
+                  >
+                    <div
+                      className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
+                      style={{ background: 'var(--color-surface-3)', border: '1px solid var(--color-border)' }}
+                    >
+                      <MessageSquare size={14} style={{ color: isActive ? 'var(--color-accent-green)' : 'var(--color-text-muted)' }} />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium truncate" style={{ color: isActive ? 'var(--color-accent-green)' : 'var(--color-text-primary)' }}>
+                        {c.title}
+                      </p>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        {sectionLabel && (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded" style={{ background: 'var(--color-surface-4)', color: 'var(--color-text-muted)' }}>
+                            {sectionLabel}
+                          </span>
+                        )}
+                        <span className="text-[10px]" style={{ color: 'var(--color-text-muted)' }}>
+                          {msgCount} pregunta{msgCount !== 1 ? 's' : ''} · {formatDate(c.updatedAt || c.createdAt)}
+                        </span>
+                      </div>
+                    </div>
+                    <button
+                      onClick={(e) => handleDeleteConsulta(e, c.id)}
+                      className="p-1 rounded-lg opacity-0 group-hover:opacity-100 transition-all shrink-0"
+                      style={{ color: 'var(--color-text-muted)' }}
+                      onMouseEnter={e => { e.currentTarget.style.background = 'var(--color-glow-red)'; e.currentTarget.style.color = 'var(--color-accent-red)' }}
+                      onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--color-text-muted)' }}
+                      title="Eliminar consulta"
+                    >
+                      <Trash2 size={12} />
+                    </button>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Section selector */}
-      <div className="animate-in stagger-1">
-        <p className="text-[10px] font-semibold uppercase tracking-widest mb-2 px-1" style={{ color: 'var(--color-text-muted)' }}>
-          Sección a analizar
-        </p>
-        <div className="flex gap-2 flex-wrap">
-          {secciones.map(s => {
-            const active = selectedSection === s.key
-            const Icon = s.icon
-            return (
-              <button
-                key={s.key}
-                onClick={() => setSelectedSection(active ? null : s.key)}
-                className="flex items-center gap-2 px-3.5 py-2 rounded-xl text-sm font-medium transition-all duration-200"
-                style={{
-                  background: active ? 'var(--color-accent-green-dim)' : 'var(--color-surface-2)',
-                  color: active ? 'var(--color-accent-green)' : 'var(--color-text-muted)',
-                  border: `1px solid ${active ? 'rgba(16,185,129,0.3)' : 'var(--color-border)'}`,
-                }}
-                onMouseEnter={e => { if (!active) { e.currentTarget.style.background = 'var(--color-surface-3)'; e.currentTarget.style.color = 'var(--color-text-secondary)' } }}
-                onMouseLeave={e => { if (!active) { e.currentTarget.style.background = 'var(--color-surface-2)'; e.currentTarget.style.color = 'var(--color-text-muted)' } }}
-              >
-                <Icon size={16} />
-                {s.label}
-              </button>
-            )
-          })}
+      {!showHistory && (
+        <div className="animate-in stagger-1">
+          <p className="text-[10px] font-semibold uppercase tracking-widest mb-2 px-1" style={{ color: 'var(--color-text-muted)' }}>
+            Sección a analizar
+          </p>
+          <div className="flex gap-2 flex-wrap">
+            {secciones.map(s => {
+              const active = selectedSection === s.key
+              const Icon = s.icon
+              return (
+                <button
+                  key={s.key}
+                  onClick={() => setSelectedSection(active ? null : s.key)}
+                  className="flex items-center gap-2 px-3.5 py-2 rounded-xl text-sm font-medium transition-all duration-200"
+                  style={{
+                    background: active ? 'var(--color-accent-green-dim)' : 'var(--color-surface-2)',
+                    color: active ? 'var(--color-accent-green)' : 'var(--color-text-muted)',
+                    border: `1px solid ${active ? 'rgba(16,185,129,0.3)' : 'var(--color-border)'}`,
+                  }}
+                  onMouseEnter={e => { if (!active) { e.currentTarget.style.background = 'var(--color-surface-3)'; e.currentTarget.style.color = 'var(--color-text-secondary)' } }}
+                  onMouseLeave={e => { if (!active) { e.currentTarget.style.background = 'var(--color-surface-2)'; e.currentTarget.style.color = 'var(--color-text-muted)' } }}
+                >
+                  <Icon size={16} />
+                  {s.label}
+                </button>
+              )
+            })}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Chat area */}
-      <div
-        className="rounded-2xl overflow-hidden flex flex-col animate-in stagger-2"
-        style={{ background: 'var(--color-surface-2)', border: '1px solid var(--color-border)', minHeight: 400, maxHeight: 'calc(100vh - 320px)' }}
-      >
-        {/* Messages */}
-        <div className="flex-1 overflow-y-auto p-5 space-y-4">
-          {messages.length === 0 && (
-            <div className="flex flex-col items-center justify-center h-full py-12">
-              <div
-                className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4"
-                style={{ background: 'var(--color-glow-green)', border: '1px solid var(--color-accent-green-dim)' }}
-              >
-                <MessageCircleQuestion size={28} style={{ color: 'var(--color-accent-green)' }} />
+      {!showHistory && (
+        <div
+          className="rounded-2xl overflow-hidden flex flex-col animate-in stagger-2"
+          style={{ background: 'var(--color-surface-2)', border: '1px solid var(--color-border)', minHeight: 400, maxHeight: 'calc(100vh - 360px)' }}
+        >
+          {/* Messages */}
+          <div className="flex-1 overflow-y-auto p-5 space-y-4">
+            {messages.length === 0 && (
+              <div className="flex flex-col items-center justify-center h-full py-12">
+                <div
+                  className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4"
+                  style={{ background: 'var(--color-glow-green)', border: '1px solid var(--color-accent-green-dim)' }}
+                >
+                  <MessageCircleQuestion size={28} style={{ color: 'var(--color-accent-green)' }} />
+                </div>
+                <p className="text-sm font-semibold" style={{ color: 'var(--color-text-secondary)' }}>
+                  {selectedSection ? `Pregunta sobre ${secciones.find(s => s.key === selectedSection)?.label}` : 'Selecciona una sección para empezar'}
+                </p>
+                <p className="text-xs mt-1 text-center max-w-sm" style={{ color: 'var(--color-text-muted)' }}>
+                  {selectedSection
+                    ? 'Escribe tu pregunta o presiona enviar para un análisis automático de la sección seleccionada'
+                    : 'Elige qué parte del dashboard quieres que la IA analice e interprete para ti'}
+                </p>
               </div>
-              <p className="text-sm font-semibold" style={{ color: 'var(--color-text-secondary)' }}>
-                {selectedSection ? `Pregunta sobre ${secciones.find(s => s.key === selectedSection)?.label}` : 'Selecciona una sección para empezar'}
-              </p>
-              <p className="text-xs mt-1 text-center max-w-sm" style={{ color: 'var(--color-text-muted)' }}>
-                {selectedSection
-                  ? 'Escribe tu pregunta o presiona enviar para un análisis automático de la sección seleccionada'
-                  : 'Elige qué parte del dashboard quieres que la IA analice e interprete para ti'}
-              </p>
-            </div>
-          )}
-          {messages.map((msg, i) => (
-            <MessageBubble key={i} msg={msg} />
-          ))}
-          {loading && (
-            <div className="flex gap-3">
-              <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ background: 'var(--color-glow-green)', border: '1px solid var(--color-accent-green-dim)' }}>
-                <Bot size={14} style={{ color: 'var(--color-accent-green)' }} />
-              </div>
-              <div className="rounded-2xl px-4 py-3" style={{ background: 'var(--color-surface-2)', border: '1px solid var(--color-border)' }}>
-                <div className="flex items-center gap-2">
-                  <Loader2 size={14} className="animate-spin" style={{ color: 'var(--color-accent-green)' }} />
-                  <span className="text-sm" style={{ color: 'var(--color-text-muted)' }}>Analizando datos...</span>
+            )}
+            {messages.map((msg, i) => (
+              <MessageBubble key={i} msg={msg} />
+            ))}
+            {loading && (
+              <div className="flex gap-3">
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ background: 'var(--color-glow-green)', border: '1px solid var(--color-accent-green-dim)' }}>
+                  <Bot size={14} style={{ color: 'var(--color-accent-green)' }} />
+                </div>
+                <div className="rounded-2xl px-4 py-3" style={{ background: 'var(--color-surface-2)', border: '1px solid var(--color-border)' }}>
+                  <div className="flex items-center gap-2">
+                    <Loader2 size={14} className="animate-spin" style={{ color: 'var(--color-accent-green)' }} />
+                    <span className="text-sm" style={{ color: 'var(--color-text-muted)' }}>Analizando datos...</span>
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
-        </div>
-
-        {/* Input */}
-        <div className="p-4" style={{ borderTop: '1px solid var(--color-border)' }}>
-          <div className="flex gap-2">
-            <input
-              value={input}
-              onChange={e => setInput(e.target.value)}
-              onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend() } }}
-              placeholder={selectedSection ? `Pregunta sobre ${secciones.find(s => s.key === selectedSection)?.label}...` : 'Selecciona una sección primero o escribe una pregunta libre...'}
-              className="flex-1 rounded-xl px-4 py-3 text-sm outline-none"
-              style={{ background: 'var(--color-surface-3)', border: '1px solid var(--color-border)', color: 'var(--color-text-primary)' }}
-              disabled={loading}
-            />
-            <button
-              onClick={handleSend}
-              disabled={loading || (!input.trim() && !selectedSection)}
-              className="px-4 rounded-xl transition-all duration-200 disabled:opacity-30 flex items-center justify-center"
-              style={{
-                background: 'var(--color-accent-green-dim)',
-                color: 'var(--color-accent-green)',
-                border: '1px solid rgba(16,185,129,0.3)',
-              }}
-            >
-              {loading ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
-            </button>
+            )}
+            <div ref={messagesEndRef} />
           </div>
-          {selectedSection && (
-            <p className="text-[11px] mt-2 px-1" style={{ color: 'var(--color-text-muted)' }}>
-              Contexto: datos en tiempo real de "{secciones.find(s => s.key === selectedSection)?.label}" · Enter para enviar
-            </p>
-          )}
+
+          {/* Input */}
+          <div className="p-4" style={{ borderTop: '1px solid var(--color-border)' }}>
+            <div className="flex gap-2">
+              <input
+                value={input}
+                onChange={e => setInput(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend() } }}
+                placeholder={selectedSection ? `Pregunta sobre ${secciones.find(s => s.key === selectedSection)?.label}...` : 'Selecciona una sección primero o escribe una pregunta libre...'}
+                className="flex-1 rounded-xl px-4 py-3 text-sm outline-none"
+                style={{ background: 'var(--color-surface-3)', border: '1px solid var(--color-border)', color: 'var(--color-text-primary)' }}
+                disabled={loading}
+              />
+              <button
+                onClick={handleSend}
+                disabled={loading || (!input.trim() && !selectedSection)}
+                className="px-4 rounded-xl transition-all duration-200 disabled:opacity-30 flex items-center justify-center"
+                style={{
+                  background: 'var(--color-accent-green-dim)',
+                  color: 'var(--color-accent-green)',
+                  border: '1px solid rgba(16,185,129,0.3)',
+                }}
+              >
+                {loading ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
+              </button>
+            </div>
+            {selectedSection && (
+              <p className="text-[11px] mt-2 px-1" style={{ color: 'var(--color-text-muted)' }}>
+                Contexto: datos en tiempo real de "{secciones.find(s => s.key === selectedSection)?.label}" · Enter para enviar
+              </p>
+            )}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   )
 }
