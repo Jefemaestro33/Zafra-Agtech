@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useApi } from '../hooks/useApi'
-import { MapContainer, TileLayer, CircleMarker, Popup } from 'react-leaflet'
+import { MapContainer, TileLayer, CircleMarker, Popup, Polygon, Polyline } from 'react-leaflet'
+import { loadShapes } from '../hooks/useMapShapes'
 import { Satellite, Map, Radio, Droplets, Thermometer, Battery, Wifi, WifiOff, Globe } from 'lucide-react'
 import KpiCard from '../components/KpiCard'
 import ScoreBadge from '../components/ScoreBadge'
@@ -46,6 +47,7 @@ export default function OverviewView({ predioId }) {
 
   const { kpis, nodos, predio } = data
   const center = [predio.lat || 20.759661, predio.lon || -103.511879]
+  const shapes = loadShapes(predioId)
   const tile = TILES[tileMode]
 
   const scoreMaxColor = kpis.score_phytophthora_max >= 76 ? 'red'
@@ -131,6 +133,12 @@ export default function OverviewView({ predioId }) {
         <div style={{ height: 420 }}>
           <MapContainer center={center} zoom={17} style={{ height: '100%', width: '100%' }} scrollWheelZoom={true}>
             <TileLayer key={tileMode} attribution={tile.attribution} url={tile.url} />
+            {shapes.polygons.map(s => (
+              <Polygon key={s.id} positions={s.points} pathOptions={{ fillColor: s.fill, color: s.color, weight: 2, fillOpacity: 0.3 }} />
+            ))}
+            {shapes.lines.map(s => (
+              <Polyline key={s.id} positions={s.points} pathOptions={{ color: s.color, weight: 3, dashArray: s.block === 'linea' ? '8 4' : undefined }} />
+            ))}
             {nodos.map(n => (
               <CircleMarker
                 key={n.nodo_id}
