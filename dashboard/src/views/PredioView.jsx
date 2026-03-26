@@ -42,12 +42,38 @@ function ConfirmModal({ open, title, message, onConfirm, onCancel }) {
   )
 }
 
-function EditableField({ icon: Icon, label, value, fieldKey, color = 'var(--color-accent-green)', onSave }) {
+function ReadOnlyField({ icon: Icon, label, value, color = 'var(--color-accent-green)' }) {
+  return (
+    <div
+      className="flex items-center gap-4 px-4 py-3.5 rounded-xl transition-colors"
+      style={{ background: 'var(--color-surface-2)', border: '1px solid var(--color-border)' }}
+      onMouseEnter={e => e.currentTarget.style.background = 'var(--color-surface-3)'}
+      onMouseLeave={e => e.currentTarget.style.background = 'var(--color-surface-2)'}
+    >
+      <div
+        className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+        style={{ background: `${color}15`, border: `1px solid ${color}30` }}
+      >
+        <Icon size={18} style={{ color }} />
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="text-[11px] font-medium" style={{ color: 'var(--color-text-muted)' }}>{label}</p>
+        <p className="text-sm font-semibold mt-0.5" style={{ color: 'var(--color-text-primary)' }}>{value || '—'}</p>
+      </div>
+    </div>
+  )
+}
+
+function EditableField({ icon: Icon, label, value, fieldKey, color = 'var(--color-accent-green)', onSave, canEdit = false }) {
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(value || '')
   const [showConfirm, setShowConfirm] = useState(false)
 
   useEffect(() => { setDraft(value || '') }, [value])
+
+  if (!canEdit) {
+    return <ReadOnlyField icon={Icon} label={label} value={value} color={color} />
+  }
 
   const handleSave = () => {
     if (draft !== value) {
@@ -292,7 +318,8 @@ function NotesSection({ predioId }) {
   )
 }
 
-export default function PredioView({ predioId, onChangePredio, predios }) {
+export default function PredioView({ predioId, onChangePredio, predios, user }) {
+  const isAdmin = user?.rol === 'admin'
   const { data: overview, loading, refetch } = useApi(`/api/predios/${predioId}/overview`)
   const { data: health } = useApi('/api/health')
   const [saveStatus, setSaveStatus] = useState(null)
@@ -384,17 +411,19 @@ export default function PredioView({ predioId, onChangePredio, predios }) {
           <p className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: 'var(--color-text-muted)' }}>
             Datos del predio
           </p>
-          <p className="text-[11px]" style={{ color: 'var(--color-text-muted)' }}>
-            Hover sobre un campo para editar
-          </p>
+          {isAdmin && (
+            <p className="text-[11px]" style={{ color: 'var(--color-text-muted)' }}>
+              Hover sobre un campo para editar
+            </p>
+          )}
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <EditableField icon={MapPin} label="Nombre" value={predio?.nombre || 'Nextipac Piloto'} fieldKey="nombre" onSave={handleFieldSave} />
-          <EditableField icon={Sprout} label="Cultivo" value={predio?.cultivo || 'Aguacate Hass'} fieldKey="cultivo" color="var(--color-accent-green)" onSave={handleFieldSave} />
-          <EditableField icon={Mountain} label="Tipo de suelo" value={predio?.tipo_suelo || 'Andisol volcánico'} fieldKey="tipo_suelo" color="var(--color-accent-amber)" onSave={handleFieldSave} />
-          <EditableField icon={Ruler} label="Superficie" value={`${predio?.hectareas || 4} hectáreas`} fieldKey="hectareas" color="var(--color-accent-cyan)" onSave={handleFieldSave} />
-          <EditableField icon={MapPin} label="Ubicación" value={predio?.municipio || 'Nextipac, Jalisco'} fieldKey="municipio" color="var(--color-accent-blue)" onSave={handleFieldSave} />
-          <EditableField icon={Calendar} label="Fecha de instalación" value={predio?.fecha_instalacion || 'Pendiente — junio 2026'} fieldKey="fecha_instalacion" color="var(--color-accent-violet)" onSave={handleFieldSave} />
+          <EditableField icon={MapPin} label="Nombre" value={predio?.nombre || 'Nextipac Piloto'} fieldKey="nombre" onSave={handleFieldSave} canEdit={isAdmin} />
+          <EditableField icon={Sprout} label="Cultivo" value={predio?.cultivo || 'Aguacate Hass'} fieldKey="cultivo" color="var(--color-accent-green)" onSave={handleFieldSave} canEdit={isAdmin} />
+          <EditableField icon={Mountain} label="Tipo de suelo" value={predio?.tipo_suelo || 'Andisol volcánico'} fieldKey="tipo_suelo" color="var(--color-accent-amber)" onSave={handleFieldSave} canEdit={isAdmin} />
+          <EditableField icon={Ruler} label="Superficie" value={`${predio?.hectareas || 4} hectáreas`} fieldKey="hectareas" color="var(--color-accent-cyan)" onSave={handleFieldSave} canEdit={isAdmin} />
+          <EditableField icon={MapPin} label="Ubicación" value={predio?.municipio || 'Nextipac, Jalisco'} fieldKey="municipio" color="var(--color-accent-blue)" onSave={handleFieldSave} canEdit={isAdmin} />
+          <EditableField icon={Calendar} label="Fecha de instalación" value={predio?.fecha_instalacion || 'Pendiente — junio 2026'} fieldKey="fecha_instalacion" color="var(--color-accent-violet)" onSave={handleFieldSave} canEdit={isAdmin} />
         </div>
       </div>
 
