@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { Routes, Route, NavLink, useNavigate, useLocation } from 'react-router-dom'
 import { useApi } from './hooks/useApi'
 import { useAuth } from './hooks/useAuth'
@@ -330,12 +331,12 @@ export default function App() {
                 })}
               </nav>
               <div className="mt-auto pb-4 flex justify-center">
-                {profileMenuOpen && (
+                {profileMenuOpen && createPortal(
                   <>
-                    <div className="fixed inset-0 z-[60]" onClick={() => setProfileMenuOpen(false)} />
+                    <div className="fixed inset-0" style={{ zIndex: 60 }} onClick={() => setProfileMenuOpen(false)} />
                     <div
-                      className="fixed rounded-2xl py-2 z-[70] animate-in shadow-2xl"
-                      style={{ background: 'var(--color-surface-3)', border: '1px solid var(--color-border-light)', width: 220, bottom: 60, left: 8 }}
+                      className="fixed rounded-2xl py-2 animate-in shadow-2xl"
+                      style={{ zIndex: 70, background: 'var(--color-surface-3)', border: '1px solid var(--color-border-light)', width: 220, bottom: 60, left: 8 }}
                     >
                       <div className="px-4 py-2 mb-1" style={{ borderBottom: '1px solid var(--color-border)' }}>
                         <p className="text-xs font-bold" style={{ color: 'var(--color-text-primary)' }}>{user.nombre}</p>
@@ -372,7 +373,8 @@ export default function App() {
                         <span className="text-xs" style={{ color: 'var(--color-accent-red)' }}>Cerrar sesión</span>
                       </button>
                     </div>
-                  </>
+                  </>,
+                  document.body
                 )}
                 <button
                   onClick={() => setProfileMenuOpen(!profileMenuOpen)}
