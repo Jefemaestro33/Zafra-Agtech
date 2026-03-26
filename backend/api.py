@@ -207,8 +207,8 @@ def listar_predios():
                 "hectareas": 4.0,
                 "tipo_suelo": "Andisol volcánico",
                 "cultivo": "Aguacate Hass",
-                "lat": 20.7005,
-                "lon": -103.418,
+                "lat": 20.759661,
+                "lon": -103.511879,
             }
         ]
     return serialize(rows)

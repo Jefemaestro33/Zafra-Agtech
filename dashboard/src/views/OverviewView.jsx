@@ -41,7 +41,7 @@ export default function OverviewView({ predioId }) {
   if (!data) return null
 
   const { kpis, nodos, predio } = data
-  const center = [predio.lat || 20.7005, predio.lon || -103.418]
+  const center = [predio.lat || 20.759661, predio.lon || -103.511879]
   const tile = TILES[tileMode]
 
   const scoreMaxColor = kpis.score_phytophthora_max >= 76 ? 'red'
@@ -130,7 +130,7 @@ export default function OverviewView({ predioId }) {
               <CircleMarker
                 key={n.nodo_id}
                 center={[n.lat, n.lon]}
-                radius={14}
+                radius={10}
                 pathOptions={{
                   fillColor: scoreColor(n.score_phytophthora),
                   color: 'rgba(255,255,255,0.6)',
