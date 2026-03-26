@@ -109,7 +109,7 @@ export default function LoginView({ onLogin }) {
                 type="text"
                 value={usuario}
                 onChange={(e) => setUsuario(e.target.value)}
-                placeholder="ernest"
+                placeholder="Usuario"
                 autoComplete="username"
                 autoFocus
                 className="w-full px-3.5 py-2.5 rounded-xl text-sm outline-none transition-all duration-200"
