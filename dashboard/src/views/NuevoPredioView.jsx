@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { MapPin, Sprout, Mountain, Ruler, Calendar, Navigation, Save, Loader2, CheckCircle, AlertTriangle } from 'lucide-react'
+import { getToken } from '../hooks/useAuth'
 
 const campos = [
   { key: 'nombre', label: 'Nombre del predio', placeholder: 'Ej: Huerta Los Pinos', icon: MapPin, color: 'var(--color-accent-green)', required: true },
@@ -45,9 +46,12 @@ export default function NuevoPredioView({ onCreated }) {
       if (body.lat) body.lat = Number(body.lat)
       if (body.lon) body.lon = Number(body.lon)
 
+      const headers = { 'Content-Type': 'application/json' }
+      const token = getToken()
+      if (token) headers['Authorization'] = `Bearer ${token}`
       const res = await fetch('/api/predios', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify(body),
       })
       const data = await res.json()

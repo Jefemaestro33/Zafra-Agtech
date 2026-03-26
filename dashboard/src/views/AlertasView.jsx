@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useApi, apiFetch } from '../hooks/useApi'
+import { getToken } from '../hooks/useAuth'
 import { AreaChart, Area, ResponsiveContainer, XAxis, Tooltip } from 'recharts'
 import { Bell, Calendar, BarChart3, CheckCircle, BrainCircuit, Send, FileText, Copy, Check, Loader2, ShieldAlert, Droplets, WifiOff, BatteryWarning, ChevronDown, ChevronUp, Star, Trash2, RotateCcw, X, HelpCircle, TrendingUp, Clock, AlertTriangle } from 'lucide-react'
 import KpiCard from '../components/KpiCard'
@@ -314,7 +315,7 @@ function HighlightModal({ open, onConfirm, onCancel }) {
 }
 
 /* ── Alerta Card ── */
-function AlertaCard({ a, onUpdate, showRestore }) {
+function AlertaCard({ a, onUpdate, showRestore, predioId }) {
   const [loadingDiag, setLoadingDiag] = useState(false)
   const [loadingReporte, setLoadingReporte] = useState(false)
   const [reporte, setReporte] = useState(null)
@@ -336,7 +337,8 @@ function AlertaCard({ a, onUpdate, showRestore }) {
   const [diagError, setDiagError] = useState(null)
   const handleGenerarDiagnostico = async () => {
     setLoadingDiag(true); setDiagError(null)
-    try { const r = await fetch(`/api/alertas/${a.id}/diagnostico`, { method: 'POST' }); if (!r.ok) throw new Error('Error del servidor'); const data = await r.json(); setLocalDiag(data.diagnostico); setExpanded(true) }
+    const headers = {}; const token = getToken(); if (token) headers['Authorization'] = `Bearer ${token}`
+    try { const r = await fetch(`/api/alertas/${a.id}/diagnostico`, { method: 'POST', headers }); if (!r.ok) throw new Error('Error del servidor'); const data = await r.json(); setLocalDiag(data.diagnostico); setExpanded(true) }
     catch (e) { setDiagError('No se pudo generar el diagnóstico. Verifica la conexión o la API de Claude.') } finally { setLoadingDiag(false) }
   }
   const handleEnviarAgronomo = () => {
@@ -347,7 +349,8 @@ function AlertaCard({ a, onUpdate, showRestore }) {
   const [reporteError, setReporteError] = useState(null)
   const handleGenerarReporte = async () => {
     setLoadingReporte(true); setReporteError(null)
-    try { const r = await fetch('/api/reportes/agricultor?predio_id=1', { method: 'POST' }); if (!r.ok) throw new Error('Error del servidor'); const data = await r.json(); setReporte(data.reporte); setExpanded(true) }
+    const headers = {}; const token = getToken(); if (token) headers['Authorization'] = `Bearer ${token}`
+    try { const r = await fetch(`/api/reportes/agricultor?predio_id=${predioId || 1}`, { method: 'POST', headers }); if (!r.ok) throw new Error('Error del servidor'); const data = await r.json(); setReporte(data.reporte); setExpanded(true) }
     catch (e) { setReporteError('No se pudo generar el reporte.') } finally { setLoadingReporte(false) }
   }
   const handleHighlight = (reason) => {
@@ -526,7 +529,7 @@ export default function AlertasView({ predioId, filter = 'todas' }) {
         <div className="space-y-3">
           {filtered.map((a, i) => (
             <div key={a.id} className={`animate-in stagger-${Math.min(i + 1, 6)}`}>
-              <AlertaCard a={a} onUpdate={handleUpdate} showRestore={filter === 'borrados'} />
+              <AlertaCard a={a} onUpdate={handleUpdate} showRestore={filter === 'borrados'} predioId={predioId} />
             </div>
           ))}
         </div>

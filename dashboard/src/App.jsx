@@ -6,7 +6,7 @@ import {
   LayoutDashboard, Radio, Droplets, GitCompareArrows, CloudSun, BrainCircuit,
   Bell, Leaf, Menu, X, ChevronsLeft, ChevronsRight, Info, Star, Trash2,
   MessageCircleQuestion, Users, UserCog, History, Download, Receipt, DollarSign,
-  Settings, BellRing, Plug, DatabaseBackup, Sun, Moon, BookOpen, LogOut, ChevronUp, PlusCircle, FilePenLine,
+  Settings, BellRing, Plug, DatabaseBackup, BookOpen, LogOut, ChevronUp, PlusCircle, FilePenLine,
   Loader2,
 } from 'lucide-react'
 import OverviewView from './views/OverviewView'
@@ -60,7 +60,6 @@ export default function App() {
   const [collapsed, setCollapsed] = useState(false)
   const [alertasOpen, setAlertasOpen] = useState(false)
   const [profileMenuOpen, setProfileMenuOpen] = useState(false)
-  const [darkMode, setDarkMode] = useState(true)
 
   const alertCount = alertas?.length || 0
   const hasAlerts = alertCount > 0
@@ -225,14 +224,14 @@ export default function App() {
 
                         <p className="px-4 pt-2 pb-1 text-[9px] font-semibold uppercase tracking-widest" style={{ color: 'var(--color-text-muted)' }}>Configuración</p>
                         {[
-                          { icon: Settings, label: 'Configuración de alertas', desc: 'Umbrales Phytophthora, riego, batería' },
-                          { icon: BellRing, label: 'Notificaciones', desc: 'Email, WhatsApp, canales' },
-                          { icon: Plug, label: 'Integraciones', desc: 'API Keys, webhooks, Telegram' },
-                          { icon: DatabaseBackup, label: 'Respaldos', desc: 'Backup y restore de datos' },
+                          { icon: Settings, label: 'Configuración de alertas', desc: 'Umbrales Phytophthora, riego, batería', path: '/config/alertas' },
+                          { icon: BellRing, label: 'Notificaciones', desc: 'Email, WhatsApp, canales', path: '/config/notificaciones' },
+                          { icon: Plug, label: 'Integraciones', desc: 'API Keys, webhooks, Telegram', path: '/config/integraciones' },
+                          { icon: DatabaseBackup, label: 'Respaldos', desc: 'Backup y restore de datos', path: '/config/respaldos' },
                         ].map((item, i) => (
                           <button
                             key={i}
-                            onClick={() => { setProfileMenuOpen(false); alert('Próximamente: ' + item.label) }}
+                            onClick={() => { setProfileMenuOpen(false); navigate(item.path) }}
                             className="w-full flex items-center gap-3 px-4 py-2 text-left transition-colors"
                             onMouseEnter={e => e.currentTarget.style.background = 'var(--color-surface-4)'}
                             onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
@@ -247,21 +246,9 @@ export default function App() {
 
                         <div className="my-1 mx-3" style={{ borderTop: '1px solid var(--color-border)' }} />
 
-                        <p className="px-4 pt-2 pb-1 text-[9px] font-semibold uppercase tracking-widest" style={{ color: 'var(--color-text-muted)' }}>Preferencias</p>
+                        <div className="my-1 mx-3" style={{ borderTop: '1px solid var(--color-border)' }} />
                         <button
-                          onClick={() => { setDarkMode(!darkMode); setProfileMenuOpen(false) }}
-                          className="w-full flex items-center gap-3 px-4 py-2 text-left transition-colors"
-                          onMouseEnter={e => e.currentTarget.style.background = 'var(--color-surface-4)'}
-                          onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                        >
-                          {darkMode ? <Moon size={15} style={{ color: 'var(--color-text-muted)' }} /> : <Sun size={15} style={{ color: 'var(--color-text-muted)' }} />}
-                          <div>
-                            <p className="text-xs font-medium" style={{ color: 'var(--color-text-primary)' }}>Tema {darkMode ? 'oscuro' : 'claro'}</p>
-                            <p className="text-[10px]" style={{ color: 'var(--color-text-muted)' }}>Cambiar apariencia</p>
-                          </div>
-                        </button>
-                        <button
-                          onClick={() => { setProfileMenuOpen(false); alert('Próximamente: Documentación') }}
+                          onClick={() => { setProfileMenuOpen(false); navigate('/docs') }}
                           className="w-full flex items-center gap-3 px-4 py-2 text-left transition-colors"
                           onMouseEnter={e => e.currentTarget.style.background = 'var(--color-surface-4)'}
                           onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
@@ -349,12 +336,12 @@ export default function App() {
                         <p className="text-[10px]" style={{ color: 'var(--color-text-muted)' }}>{user.rol === 'admin' ? 'Administrador' : 'Agrónomo'} · AgTech</p>
                       </div>
                       {[
-                        { icon: Settings, label: 'Config. alertas' },
-                        { icon: BellRing, label: 'Notificaciones' },
-                        { icon: Plug, label: 'Integraciones' },
-                        { icon: DatabaseBackup, label: 'Respaldos' },
+                        { icon: Settings, label: 'Config. alertas', path: '/config/alertas' },
+                        { icon: BellRing, label: 'Notificaciones', path: '/config/notificaciones' },
+                        { icon: Plug, label: 'Integraciones', path: '/config/integraciones' },
+                        { icon: DatabaseBackup, label: 'Respaldos', path: '/config/respaldos' },
                       ].map((item, i) => (
-                        <button key={i} onClick={() => { setProfileMenuOpen(false); alert('Próximamente: ' + item.label) }}
+                        <button key={i} onClick={() => { setProfileMenuOpen(false); navigate(item.path) }}
                           className="w-full flex items-center gap-3 px-4 py-2 text-left transition-colors"
                           onMouseEnter={e => e.currentTarget.style.background = 'var(--color-surface-4)'}
                           onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
@@ -363,14 +350,7 @@ export default function App() {
                         </button>
                       ))}
                       <div className="my-1 mx-3" style={{ borderTop: '1px solid var(--color-border)' }} />
-                      <button onClick={() => { setDarkMode(!darkMode); setProfileMenuOpen(false) }}
-                        className="w-full flex items-center gap-3 px-4 py-2 text-left transition-colors"
-                        onMouseEnter={e => e.currentTarget.style.background = 'var(--color-surface-4)'}
-                        onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-                        {darkMode ? <Moon size={14} style={{ color: 'var(--color-text-muted)' }} /> : <Sun size={14} style={{ color: 'var(--color-text-muted)' }} />}
-                        <span className="text-xs" style={{ color: 'var(--color-text-primary)' }}>Tema {darkMode ? 'oscuro' : 'claro'}</span>
-                      </button>
-                      <button onClick={() => { setProfileMenuOpen(false); alert('Próximamente: Docs') }}
+                      <button onClick={() => { setProfileMenuOpen(false); navigate('/docs') }}
                         className="w-full flex items-center gap-3 px-4 py-2 text-left transition-colors"
                         onMouseEnter={e => e.currentTarget.style.background = 'var(--color-surface-4)'}
                         onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>

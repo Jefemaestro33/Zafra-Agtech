@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useApi, apiFetch } from '../hooks/useApi'
+import { getToken } from '../hooks/useAuth'
 import {
   MapPin, Sprout, Mountain, Ruler, Calendar, Navigation,
   AlertTriangle, Check, X, Pencil, Save, Loader2, ChevronDown,
@@ -109,9 +110,12 @@ export default function AdminPredioView({ predioId, predios, onChangePredio }) {
     setEditing(null)
     setSaving(true)
     try {
+      const headers = { 'Content-Type': 'application/json' }
+      const token = getToken()
+      if (token) headers['Authorization'] = `Bearer ${token}`
       const res = await fetch(`/api/predios/${predioId}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({ [key]: newVal }),
       })
       if (res.ok) {
