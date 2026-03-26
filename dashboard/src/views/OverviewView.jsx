@@ -31,7 +31,7 @@ const TILES = {
     attribution: 'Google',
   },
   sentinel: {
-    url: 'https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless-2021_3857/default/g/{z}/{y}/{x}.jpg',
+    url: 'https://tiles.maps.eox.at/wmts?layer=s2cloudless-2021_3857&style=default&tilematrixset=g&Service=WMTS&Request=GetTile&Version=1.0.0&Format=image%2Fjpeg&TileMatrix={z}&TileCol={x}&TileRow={y}',
     attribution: 'Sentinel-2 Cloudless — EOX',
   },
   mapa: {
