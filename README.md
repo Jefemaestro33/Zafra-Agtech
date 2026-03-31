@@ -1,6 +1,8 @@
-# AgTech Nextipac
+# AgTech Sistema
 
-Sistema de agricultura inteligente para aguacate Hass en Nextipac, Jalisco. Combina sensores IoT enterrados en el suelo, datos climáticos en tiempo real, machine learning para predicción de microbioma, y un agente de IA (Claude) que genera diagnósticos accionables para agrónomos.
+Plataforma de agricultura inteligente diseñada para servir a agricultores de todo México. Combina sensores IoT enterrados en el suelo, datos climáticos en tiempo real, machine learning para predicción de microbioma, y un agente de IA (Claude) que genera diagnósticos accionables para agrónomos.
+
+**Piloto:** La primera implementación se realizará en una huerta de aguacate Hass en Nextipac, Jalisco. Una vez validado el sistema en campo, el objetivo es expandir la plataforma a otros cultivos y regiones del país.
 
 ## Stack
 
@@ -106,4 +108,4 @@ Nivel 4 — Sistema multi-agente
 
 ## Licencia
 
-Privado. Universidad Panamericana / AgTech Nextipac.
+Privado. Universidad Panamericana / AgTech Sistema.
