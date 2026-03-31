@@ -103,7 +103,7 @@ def _load_users() -> dict:
             "carloslp": {
                 "nombre": "Carlos LP",
                 "usuario": "carloslp",
-                "rol": "admin",
+                "rol": "observador",
                 "iniciales": "CL",
                 "password_hash": _hash_pw("Nxt#Agr0_C4rlos!2026"),
             },
