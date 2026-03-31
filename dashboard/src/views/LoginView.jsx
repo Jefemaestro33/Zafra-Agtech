@@ -215,12 +215,40 @@ export default function LoginView({ onLogin }) {
           </form>
         </div>
 
+        {/* Demo access */}
+        <div className="mt-4 text-center">
+          <button
+            onClick={() => onLogin({
+              token: 'demo',
+              usuario: 'demo',
+              nombre: 'Visitante',
+              rol: 'observador',
+              iniciales: 'VT',
+              isDemo: true,
+            })}
+            className="text-xs px-4 py-2 rounded-xl transition-all duration-200"
+            style={{
+              color: 'var(--color-accent-green)',
+              background: 'transparent',
+              border: '1px solid var(--color-accent-green-dim)',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = 'var(--color-glow-green)'
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'transparent'
+            }}
+          >
+            Ver demo sin cuenta
+          </button>
+        </div>
+
         {/* Footer */}
         <p
           className="text-center text-[10px] mt-6"
           style={{ color: 'var(--color-text-muted)' }}
         >
-          AgTech Nextipac · v0.3
+          AgTech Sistema · v1.1
         </p>
       </div>
 

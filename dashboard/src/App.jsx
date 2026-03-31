@@ -31,6 +31,8 @@ const ConfigNotificacionesView = lazy(() => import('./views/ConfigNotificaciones
 const ConfigIntegracionesView = lazy(() => import('./views/ConfigIntegracionesView'))
 const ConfigRespaldosView = lazy(() => import('./views/ConfigRespaldosView'))
 const AdminMapaView = lazy(() => import('./views/AdminMapaView'))
+const LandingView = lazy(() => import('./views/LandingView'))
+const ExportView = lazy(() => import('./views/ExportView'))
 
 const tabs = [
   { path: '/predio', label: 'Predio', icon: Info },
@@ -99,9 +101,15 @@ export default function App() {
     )
   }
 
-  // Login screen
+  // Landing / Login screen
+  const [showLogin, setShowLogin] = useState(false)
   if (!user) {
-    return <LoginView onLogin={login} />
+    const enterDemo = () => login({
+      token: 'demo', usuario: 'demo', nombre: 'Visitante',
+      rol: 'observador', iniciales: 'VT', isDemo: true,
+    })
+    if (showLogin) return <Suspense fallback={<Loading />}><LoginView onLogin={login} /></Suspense>
+    return <Suspense fallback={<Loading />}><LandingView onEnterDemo={enterDemo} onGoLogin={() => setShowLogin(true)} /></Suspense>
   }
 
   const isTabActive = (t) => {
@@ -423,7 +431,7 @@ export default function App() {
               <Route path="/agronomos" element={<ProximamenteView title="Agrónomos" description="Gestión del equipo de campo: agregar, quitar y asignar agrónomos a predios. Control de accesos por rol." icon={Users} />} />
               <Route path="/usuarios" element={<ProximamenteView title="Usuarios" description="Administración de usuarios del sistema: roles (admin, agrónomo, observador), permisos y accesos al dashboard." icon={UserCog} />} />
               <Route path="/historial" element={<ProximamenteView title="Historial de actividad" description="Registro completo de quién hizo qué y cuándo: cambios en predios, alertas generadas, diagnósticos IA, y acciones del equipo." icon={History} />} />
-              <Route path="/exportar" element={<ProximamenteView title="Exportar datos" description="Descarga lecturas de sensores, alertas, reportes y firmas hídricas en formato CSV o PDF para análisis externo." icon={Download} />} />
+              <Route path="/exportar" element={<ExportView predioId={predioId} />} />
               <Route path="/contabilidad" element={<ProximamenteView title="Contabilidad" description="Registro de gastos operativos, costos de laboratorio, hardware y mantenimiento por predio." icon={Receipt} />} />
               <Route path="/finanzas" element={<ProximamenteView title="Finanzas" description="Proyección de ingresos por predio, tracking del 30% de incremento de producción, y análisis de rentabilidad." icon={DollarSign} />} />
               <Route path="/config/alertas" element={<ConfigAlertasView />} />

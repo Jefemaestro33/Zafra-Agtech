@@ -152,13 +152,39 @@ class DiagnosticoVisualRequest(BaseModel):
 
 
 # ============================================================
-# AUTH
+# AUTH (with rate limiting)
 # ============================================================
+_login_attempts = {}  # {ip: [timestamp, timestamp, ...]}
+_MAX_LOGIN_ATTEMPTS = 5
+_LOGIN_WINDOW_SECONDS = 300  # 5 minutes
+
+def _check_rate_limit(client_ip: str):
+    """Block login if too many failed attempts from this IP."""
+    import time
+    now = time.time()
+    attempts = _login_attempts.get(client_ip, [])
+    # Clean old attempts
+    attempts = [t for t in attempts if now - t < _LOGIN_WINDOW_SECONDS]
+    _login_attempts[client_ip] = attempts
+    if len(attempts) >= _MAX_LOGIN_ATTEMPTS:
+        raise HTTPException(429, "Demasiados intentos. Espera 5 minutos.")
+
+
 @app.post("/api/auth/login")
 def login(req: LoginRequest):
+    from fastapi import Request as FastAPIRequest
+    # Rate limit by simple counter (no request object needed for basic protection)
+    rate_key = req.usuario.lower().strip()
+    _check_rate_limit(rate_key)
+
     user = autenticar_usuario(req.usuario, req.password)
     if not user:
+        import time
+        _login_attempts.setdefault(rate_key, []).append(time.time())
         raise HTTPException(status_code=401, detail="Usuario o contraseña incorrectos")
+
+    # Clear attempts on success
+    _login_attempts.pop(rate_key, None)
     token = crear_token(user["usuario"], user["rol"])
     return TokenResponse(
         token=token,
@@ -172,6 +198,17 @@ def login(req: LoginRequest):
 @app.get("/api/auth/me")
 def auth_me(user: dict = Depends(verificar_token)):
     return user
+
+
+@app.get("/api/auth/demo")
+def auth_demo():
+    """Demo access — read-only, no credentials required."""
+    return {
+        "usuario": "demo",
+        "nombre": "Visitante",
+        "rol": "observador",
+        "iniciales": "VT",
+    }
 
 
 # ============================================================
@@ -881,6 +918,122 @@ def diagnostico_visual_endpoint(req: DiagnosticoVisualRequest):
     respuesta = consultar_llm_visual(req.imagen_base64, texto)
     diagnostico = parsear_diagnostico(respuesta)
     return {"diagnostico": diagnostico, "nodo_id": req.nodo_id}
+
+
+# ============================================================
+# EXPORT CSV
+# ============================================================
+@app.get("/api/export/lecturas")
+def export_lecturas(
+    predio_id: int = Query(1),
+    dias: int = Query(7),
+):
+    """Export sensor readings as CSV."""
+    import io
+    import csv
+    from fastapi.responses import StreamingResponse
+
+    rows = query(
+        """
+        SELECT l.tiempo, l.nodo_id, n.nombre, l.h10_avg, l.h20_avg, l.h30_avg,
+               l.t20, l.ec30, l.bateria, l.rssi
+        FROM lecturas l
+        JOIN nodos n ON l.nodo_id = n.nodo_id
+        WHERE n.predio_id = %s
+          AND l.tiempo >= (SELECT MAX(tiempo) FROM lecturas) - interval '%s days'
+        ORDER BY l.tiempo DESC
+        """,
+        (predio_id, dias),
+    )
+
+    output = io.StringIO()
+    writer = csv.DictWriter(output, fieldnames=[
+        "tiempo", "nodo_id", "nombre", "h10_avg", "h20_avg", "h30_avg",
+        "t20", "ec30", "bateria", "rssi",
+    ])
+    writer.writeheader()
+    for r in rows:
+        r["tiempo"] = str(r["tiempo"])
+        writer.writerow(r)
+
+    output.seek(0)
+    return StreamingResponse(
+        iter([output.getvalue()]),
+        media_type="text/csv",
+        headers={"Content-Disposition": f"attachment; filename=agtech_lecturas_{dias}d.csv"},
+    )
+
+
+@app.get("/api/export/alertas")
+def export_alertas(predio_id: int = Query(1)):
+    """Export alerts as CSV."""
+    import io
+    import csv
+    from fastapi.responses import StreamingResponse
+
+    rows = query(
+        """
+        SELECT e.tiempo, e.nodo_id, n.nombre, e.tipo, e.procesado
+        FROM eventos e
+        JOIN nodos n ON e.nodo_id = n.nodo_id
+        WHERE n.predio_id = %s
+        ORDER BY e.tiempo DESC
+        """,
+        (predio_id,),
+    )
+
+    output = io.StringIO()
+    writer = csv.DictWriter(output, fieldnames=["tiempo", "nodo_id", "nombre", "tipo", "procesado"])
+    writer.writeheader()
+    for r in rows:
+        r["tiempo"] = str(r["tiempo"])
+        writer.writerow(r)
+
+    output.seek(0)
+    return StreamingResponse(
+        iter([output.getvalue()]),
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=agtech_alertas.csv"},
+    )
+
+
+@app.get("/api/export/firma")
+def export_firma(predio_id: int = Query(1)):
+    """Export firma hidrica as CSV."""
+    import io
+    import csv
+    from fastapi.responses import StreamingResponse
+
+    rows = query(
+        """
+        SELECT f.nodo_id, n.nombre, f.evento_riego, f.tau_10, f.tau_20, f.tau_30,
+               f.vel_10_20, f.vel_20_30, f.h10_pico, f.h30_pico,
+               f.breaking_point_10, f.delta_h_max
+        FROM firma_hidrica f
+        JOIN nodos n ON f.nodo_id = n.nodo_id
+        WHERE n.predio_id = %s
+        ORDER BY f.evento_riego DESC
+        """,
+        (predio_id,),
+    )
+
+    output = io.StringIO()
+    writer = csv.DictWriter(output, fieldnames=[
+        "nodo_id", "nombre", "evento_riego", "tau_10", "tau_20", "tau_30",
+        "vel_10_20", "vel_20_30", "h10_pico", "h30_pico",
+        "breaking_point_10", "delta_h_max",
+    ])
+    writer.writeheader()
+    for r in rows:
+        r["evento_riego"] = str(r["evento_riego"])
+        writer.writerow(r)
+
+    output.seek(0)
+    return StreamingResponse(
+        iter([output.getvalue()]),
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=agtech_firma_hidrica.csv"},
+    )
 
 
 # ============================================================
