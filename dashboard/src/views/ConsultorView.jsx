@@ -265,7 +265,7 @@ export default function ConsultorView({ predioId }) {
           )}
           <div>
             <h2 className="text-lg font-bold" style={{ color: 'var(--color-text-primary)' }}>
-              {isViewingHistory ? activeConsulta?.title || 'Consulta' : 'Consultor IA'}
+              {isViewingHistory ? activeConsulta?.title || 'Consulta' : 'Consultor'}
             </h2>
             <p className="text-sm mt-0.5" style={{ color: 'var(--color-text-muted)' }}>
               {isViewingHistory

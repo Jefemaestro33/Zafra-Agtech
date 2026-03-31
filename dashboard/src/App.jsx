@@ -24,7 +24,7 @@ const PredioView = lazy(() => import('./views/PredioView'))
 const ConsultorView = lazy(() => import('./views/ConsultorView'))
 const ProximamenteView = lazy(() => import('./views/ProximamenteView'))
 const NuevoPredioView = lazy(() => import('./views/NuevoPredioView'))
-const AdminPredioView = lazy(() => import('./views/AdminPredioView'))
+const AdminPrediosView = lazy(() => import('./views/AdminPrediosView'))
 const LoginView = lazy(() => import('./views/LoginView'))
 const ConfigAlertasView = lazy(() => import('./views/ConfigAlertasView'))
 const ConfigNotificacionesView = lazy(() => import('./views/ConfigNotificacionesView'))
@@ -51,9 +51,7 @@ const tabs = [
   },
   { path: '/consultor', label: 'Consultor', icon: MessageCircleQuestion },
   { type: 'section', label: 'Administrador' },
-  { path: '/admin/predio', label: 'Editar predio', icon: FilePenLine },
-  { path: '/admin/mapa', label: 'Posicionar nodos', icon: MapPinned },
-  { path: '/nuevo-predio', label: 'Nuevo predio', icon: PlusCircle },
+  { path: '/admin/predios', label: 'Gestionar predios', icon: FilePenLine },
   { path: '/agronomos', label: 'Agrónomos', icon: Users },
   { path: '/usuarios', label: 'Usuarios', icon: UserCog },
   { path: '/historial', label: 'Historial', icon: History },
@@ -421,9 +419,7 @@ export default function App() {
               <Route path="/alertas/destacadas" element={<AlertasView predioId={predioId} filter="destacadas" />} />
               <Route path="/alertas/borradas" element={<AlertasView predioId={predioId} filter="borradas" />} />
               <Route path="/consultor" element={<ConsultorView predioId={predioId} />} />
-              <Route path="/admin/predio" element={<AdminPredioView predioId={predioId} predios={predios} onChangePredio={setPredioId} />} />
-              <Route path="/admin/mapa" element={<AdminMapaView predioId={predioId} />} />
-              <Route path="/nuevo-predio" element={<NuevoPredioView onCreated={(id) => { setPredioId(id); navigate('/predio') }} />} />
+              <Route path="/admin/predios" element={<AdminPrediosView predioId={predioId} predios={predios} onChangePredio={setPredioId} onCreated={(id) => { setPredioId(id); navigate('/predio') }} />} />
               <Route path="/agronomos" element={<ProximamenteView title="Agrónomos" description="Gestión del equipo de campo: agregar, quitar y asignar agrónomos a predios. Control de accesos por rol." icon={Users} />} />
               <Route path="/usuarios" element={<ProximamenteView title="Usuarios" description="Administración de usuarios del sistema: roles (admin, agrónomo, observador), permisos y accesos al dashboard." icon={UserCog} />} />
               <Route path="/historial" element={<ProximamenteView title="Historial de actividad" description="Registro completo de quién hizo qué y cuándo: cambios en predios, alertas generadas, diagnósticos IA, y acciones del equipo." icon={History} />} />
