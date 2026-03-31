@@ -80,6 +80,7 @@ export default function App() {
   const [collapsed, setCollapsed] = useState(false)
   const [alertasOpen, setAlertasOpen] = useState(false)
   const [profileMenuOpen, setProfileMenuOpen] = useState(false)
+  const [showLogin, setShowLogin] = useState(false)
 
   const alertCount = alertas?.length || 0
   const hasAlerts = alertCount > 0
@@ -102,7 +103,6 @@ export default function App() {
   }
 
   // Landing / Login screen
-  const [showLogin, setShowLogin] = useState(false)
   if (!user) {
     if (showLogin) return <Suspense fallback={<Loading />}><LoginView onLogin={login} /></Suspense>
     return <Suspense fallback={<Loading />}><LandingView onEnterDemo={() => setShowLogin(true)} onGoLogin={() => setShowLogin(true)} /></Suspense>
