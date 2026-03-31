@@ -21,7 +21,7 @@ export function useApi(path, deps = []) {
     fetch(path, { headers: authHeaders() })
       .then(r => { if (!r.ok) throw new Error(r.status); return r.json() })
       .then(d => { setData(d); setError(null); isFirstLoad.current = false })
-      .catch(e => setError(e.message))
+      .catch(e => setError(e?.message || String(e) || "Error desconocido"))
       .finally(() => setLoading(false))
   }, [path, ...deps])
 
@@ -30,11 +30,22 @@ export function useApi(path, deps = []) {
     refetch()
   }, [refetch])
 
-  // Auto-refresh every 30s (silent — no spinner)
+  // Auto-refresh every 30s (silent — pauses when tab is not visible)
   useEffect(() => {
     if (!path) return
-    const id = setInterval(refetch, REFRESH_INTERVAL)
-    return () => clearInterval(id)
+    let id = null
+
+    const start = () => { id = setInterval(refetch, REFRESH_INTERVAL) }
+    const stop = () => { if (id) { clearInterval(id); id = null } }
+    const onVisibility = () => { document.hidden ? stop() : start() }
+
+    if (!document.hidden) start()
+    document.addEventListener('visibilitychange', onVisibility)
+
+    return () => {
+      stop()
+      document.removeEventListener('visibilitychange', onVisibility)
+    }
   }, [path, refetch])
 
   return { data, loading, error, refetch }

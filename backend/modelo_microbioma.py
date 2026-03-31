@@ -252,16 +252,11 @@ def entrenar_modelo(X, y, target_name):
     imputer = SimpleImputer(strategy="median")
     X_imp = imputer.fit_transform(X)
 
-    # Leave-One-Out
-    predicciones = np.zeros(n)
-    for i in range(n):
-        X_train = np.delete(X_imp, i, axis=0)
-        y_train = np.delete(y, i)
-        X_test = X_imp[i:i+1]
-
-        rf = RandomForestRegressor(n_estimators=100, max_depth=10, random_state=42)
-        rf.fit(X_train, y_train)
-        predicciones[i] = rf.predict(X_test)[0]
+    # K-Fold CV (5 folds) — much faster than LOO for large datasets
+    from sklearn.model_selection import cross_val_predict, KFold
+    kf = KFold(n_splits=min(5, n), shuffle=True, random_state=42)
+    rf_cv = RandomForestRegressor(n_estimators=100, max_depth=10, random_state=42)
+    predicciones = cross_val_predict(rf_cv, X_imp, y, cv=kf)
 
     r2 = r2_score(y, predicciones)
     mae = mean_absolute_error(y, predicciones)
@@ -315,7 +310,7 @@ def predecir_actual(conn, nodo_id, modelos):
 
     predicciones = {}
     for target, m in modelos.items():
-        if m is None:
+        if m is None or "imputer" not in m or "modelo" not in m:
             continue
         X_imp = m["imputer"].transform(row)
         pred = m["modelo"].predict(X_imp)[0]

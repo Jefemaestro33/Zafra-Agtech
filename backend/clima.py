@@ -203,7 +203,7 @@ def insertar_clima(conn, registros):
                     r["radiacion_solar"], r["eto"], precip_7d, r["fuente"],
                 ))
                 insertados += 1
-            except psycopg2.errors.UniqueViolation:
+            except psycopg2.IntegrityError:
                 conn.rollback()
                 continue
     conn.commit()
@@ -232,7 +232,7 @@ def insertar_clima_batch(conn, registros):
                     r["radiacion_solar"], r["eto"], 0.0, r["fuente"],
                 ))
                 insertados += 1
-            except psycopg2.errors.UniqueViolation:
+            except psycopg2.IntegrityError:
                 conn.rollback()
     conn.commit()
 

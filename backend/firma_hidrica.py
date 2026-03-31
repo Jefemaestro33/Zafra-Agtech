@@ -315,15 +315,20 @@ def calcular_firma(conn, nodo_id, evento_timestamp):
 # ============================================================
 def procesar_todas_firmas(conn, nodo_id=None):
     """Detecta eventos y calcula firmas para uno o todos los nodos."""
-    # Limpiar tabla antes de insertar (idempotente)
-    with conn.cursor() as cur:
-        if nodo_id:
-            cur.execute("DELETE FROM firma_hidrica WHERE nodo_id = %s", (nodo_id,))
-            log.info(f"Limpiado firmas existentes del nodo {nodo_id}")
-        else:
-            cur.execute("TRUNCATE TABLE firma_hidrica")
-            log.info("Limpiada tabla firma_hidrica completa")
-    conn.commit()
+    # Limpiar tabla antes de insertar (idempotente), within a savepoint for safety
+    try:
+        with conn.cursor() as cur:
+            if nodo_id:
+                cur.execute("DELETE FROM firma_hidrica WHERE nodo_id = %s", (nodo_id,))
+                log.info(f"Limpiado firmas existentes del nodo {nodo_id}")
+            else:
+                cur.execute("DELETE FROM firma_hidrica")
+                log.info("Limpiada tabla firma_hidrica completa")
+        conn.commit()
+    except Exception as e:
+        conn.rollback()
+        log.error(f"Error limpiando firma_hidrica: {e}")
+        raise
 
     # Obtener nodos a procesar
     with conn.cursor(cursor_factory=RealDictCursor) as cur:

@@ -112,15 +112,34 @@ float leerBateria() {
     return voltaje;
 }
 
-// Transmitir paquete por LoRa
+// Transmitir paquete por LoRa con retry (3 intentos, backoff exponencial)
+// Si todos fallan, el paquete se pierde (futuro: guardar en RTC memory)
 void transmitirPaquete(Paquete* paq) {
-    LoRa.beginPacket();
-    LoRa.write((uint8_t*)paq, sizeof(Paquete));
-    LoRa.endPacket();
+    const int MAX_RETRIES = 3;
+    const int RETRY_DELAYS_MS[] = {500, 1000, 2000};
 
-    // Guardar RSSI (del último paquete recibido, como referencia)
-    // En TX no hay RSSI real — usamos el SNR del LoRa como proxy
-    paq->rssi = (int8_t)LoRa.packetRssi();
+    for (int intento = 0; intento < MAX_RETRIES; intento++) {
+        LoRa.beginPacket();
+        LoRa.write((uint8_t*)paq, sizeof(Paquete));
+        int result = LoRa.endPacket();
+
+        if (result == 1) {
+            // TX success
+            paq->rssi = (int8_t)LoRa.packetRssi();
+            if (intento > 0) {
+                Serial.printf("[LORA] TX OK after %d retries\n", intento);
+            }
+            return;
+        }
+
+        Serial.printf("[LORA] TX failed (attempt %d/%d)\n", intento + 1, MAX_RETRIES);
+        if (intento < MAX_RETRIES - 1) {
+            delay(RETRY_DELAYS_MS[intento]);
+        }
+    }
+
+    Serial.println("[LORA] TX failed after all retries — packet lost");
+    // TODO: store failed packet in RTC memory to retry on next wake cycle
 }
 
 // Entrar en deep sleep

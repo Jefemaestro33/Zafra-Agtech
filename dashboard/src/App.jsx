@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, lazy, Suspense } from 'react'
 import { createPortal } from 'react-dom'
 import { Routes, Route, NavLink, useNavigate, useLocation } from 'react-router-dom'
 import { useApi } from './hooks/useApi'
 import { useAuth } from './hooks/useAuth'
+import ErrorBoundary from './components/ErrorBoundary'
 import {
   LayoutDashboard, Radio, Droplets, GitCompareArrows, CloudSun, BrainCircuit,
   Bell, Leaf, Menu, X, ChevronsLeft, ChevronsRight, Info, Star, Trash2,
@@ -10,23 +11,26 @@ import {
   Settings, BellRing, Plug, DatabaseBackup, BookOpen, LogOut, ChevronUp, PlusCircle, FilePenLine, MapPinned,
   Loader2,
 } from 'lucide-react'
-import OverviewView from './views/OverviewView'
-import NodoView from './views/NodoView'
-import FirmaView from './views/FirmaView'
-import ComparativoView from './views/ComparativoView'
-import ClimaView from './views/ClimaView'
-import AlertasView from './views/AlertasView'
-import PredioView from './views/PredioView'
-import ConsultorView from './views/ConsultorView'
-import ProximamenteView from './views/ProximamenteView'
-import NuevoPredioView from './views/NuevoPredioView'
-import AdminPredioView from './views/AdminPredioView'
-import LoginView from './views/LoginView'
-import ConfigAlertasView from './views/ConfigAlertasView'
-import ConfigNotificacionesView from './views/ConfigNotificacionesView'
-import ConfigIntegracionesView from './views/ConfigIntegracionesView'
-import ConfigRespaldosView from './views/ConfigRespaldosView'
-import AdminMapaView from './views/AdminMapaView'
+import Loading from './components/Loading'
+
+// Lazy-loaded views for code splitting
+const OverviewView = lazy(() => import('./views/OverviewView'))
+const NodoView = lazy(() => import('./views/NodoView'))
+const FirmaView = lazy(() => import('./views/FirmaView'))
+const ComparativoView = lazy(() => import('./views/ComparativoView'))
+const ClimaView = lazy(() => import('./views/ClimaView'))
+const AlertasView = lazy(() => import('./views/AlertasView'))
+const PredioView = lazy(() => import('./views/PredioView'))
+const ConsultorView = lazy(() => import('./views/ConsultorView'))
+const ProximamenteView = lazy(() => import('./views/ProximamenteView'))
+const NuevoPredioView = lazy(() => import('./views/NuevoPredioView'))
+const AdminPredioView = lazy(() => import('./views/AdminPredioView'))
+const LoginView = lazy(() => import('./views/LoginView'))
+const ConfigAlertasView = lazy(() => import('./views/ConfigAlertasView'))
+const ConfigNotificacionesView = lazy(() => import('./views/ConfigNotificacionesView'))
+const ConfigIntegracionesView = lazy(() => import('./views/ConfigIntegracionesView'))
+const ConfigRespaldosView = lazy(() => import('./views/ConfigRespaldosView'))
+const AdminMapaView = lazy(() => import('./views/AdminMapaView'))
 
 const tabs = [
   { path: '/predio', label: 'Predio', icon: Info },
@@ -59,7 +63,14 @@ const tabs = [
 export default function App() {
   const { user, loading: authLoading, login, logout } = useAuth()
   const { data: predios } = useApi(user ? '/api/predios' : null)
-  const [predioId, setPredioId] = useState(1)
+  const [predioId, setPredioId] = useState(() => {
+    const saved = localStorage.getItem('agtech_predio_id')
+    return saved ? parseInt(saved, 10) : 1
+  })
+
+  useEffect(() => {
+    localStorage.setItem('agtech_predio_id', String(predioId))
+  }, [predioId])
   const { data: alertas } = useApi(user ? `/api/predios/${predioId}/alertas` : null)
   const navigate = useNavigate()
   const location = useLocation()
@@ -392,6 +403,8 @@ export default function App() {
         {/* Main */}
         <main className={`flex-1 overflow-y-auto mt-12 ${collapsed ? 'lg:ml-[60px]' : 'lg:ml-[220px]'} transition-all duration-200`}>
           <div className="max-w-[1400px] mx-auto px-4 sm:px-6 py-6">
+            <ErrorBoundary>
+            <Suspense fallback={<Loading />}>
             <Routes>
               <Route path="/" element={<OverviewView predioId={predioId} />} />
               <Route path="/predio" element={<PredioView predioId={predioId} onChangePredio={setPredioId} predios={predios} user={user} />} />
@@ -419,6 +432,8 @@ export default function App() {
               <Route path="/config/respaldos" element={<ConfigRespaldosView />} />
               <Route path="/docs" element={<ProximamenteView title="Documentación" description="Guías de uso del sistema, documentación técnica, y recursos de ayuda para el equipo." icon={BookOpen} />} />
             </Routes>
+            </Suspense>
+            </ErrorBoundary>
           </div>
         </main>
       </div>
