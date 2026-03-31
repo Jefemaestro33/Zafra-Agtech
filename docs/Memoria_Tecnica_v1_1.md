@@ -9,7 +9,7 @@ Guadalajara, Jalisco
 
 ## 1. RESUMEN EJECUTIVO
 
-AgTech es un sistema de agricultura inteligente que combina sensores IoT enterrados en el suelo, datos climáticos en tiempo real, machine learning, y un agente de IA (Claude) para optimizar riego, prevenir Phytophthora cinnamomi y monitorear el microbioma del suelo en huertas de aguacate Hass en Nextipac, Jalisco.
+AgTech es una plataforma de agricultura inteligente diseñada para servir a agricultores de todo México. Combina sensores IoT enterrados en el suelo, datos climáticos en tiempo real, machine learning, y un agente de IA (Claude) para optimizar riego, prevenir Phytophthora cinnamomi y monitorear el microbioma del suelo. El primer piloto se realizará en una huerta de aguacate Hass en Nextipac, Jalisco, con el objetivo de expandir a otros cultivos y regiones del país tras la validación en campo.
 
 El sistema resuelve un problema concreto: los productores de aguacate pierden entre 15-30% de su producción anual por Phytophthora cinnamomi, un oomiceto que pudre las raíces cuando el suelo está saturado de agua. La detección convencional (visual) llega tarde — cuando los síntomas aparecen en las hojas, el árbol ya tiene daño radicular severo. AgTech detecta las condiciones de riesgo en el suelo antes de que la planta manifieste síntomas, permitiendo intervención preventiva.
 
@@ -27,6 +27,7 @@ El sistema resuelve un problema concreto: los productores de aguacate pierden en
 - **Cobro:** 30% del incremento de producción atribuible al sistema, medido contra parcela testigo
 - **Piloto:** 4 hectáreas en Nextipac con 8 nodos (4 tratamiento + 4 testigo)
 - **Pipeline:** 10 agricultores con 500+ hectáreas comprometidas para fase de validación
+- **Expansión:** Tras validar el piloto, escalar a otros cultivos y regiones de México
 - **Financiamiento:** Fondo de inversión Universidad Panamericana, estimado junio 2026
 
 ---
