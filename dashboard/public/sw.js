@@ -1,4 +1,4 @@
-const CACHE_NAME = 'agtech-v1'
+const CACHE_NAME = 'agtech-v2'
 const STATIC_ASSETS = ['/', '/index.html']
 
 self.addEventListener('install', (event) => {
@@ -19,8 +19,8 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('fetch', (event) => {
   const { request } = event
-  // Only cache GET requests, skip API calls
-  if (request.method !== 'GET' || request.url.includes('/api/')) return
+  // Skip non-GET, API calls, and hashed assets (they have built-in cache busting)
+  if (request.method !== 'GET' || request.url.includes('/api/') || request.url.includes('/assets/')) return
 
   event.respondWith(
     fetch(request)
