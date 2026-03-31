@@ -100,6 +100,20 @@ def _load_users() -> dict:
                 "iniciales": "SV",
                 "password_hash": _hash_pw(os.environ.get("DEFAULT_AGRO_PASS", "campo123")),
             },
+            "carloslp": {
+                "nombre": "Carlos LP",
+                "usuario": "carloslp",
+                "rol": "admin",
+                "iniciales": "CL",
+                "password_hash": _hash_pw("Nxt#Agr0_C4rlos!2026"),
+            },
+            "invitado": {
+                "nombre": "Invitado",
+                "usuario": "invitado",
+                "rol": "observador",
+                "iniciales": "IN",
+                "password_hash": _hash_pw("AgTech_Visit4nte"),
+            },
         }
     return users
 

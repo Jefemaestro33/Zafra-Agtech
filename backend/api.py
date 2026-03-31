@@ -201,16 +201,6 @@ def auth_me(user: dict = Depends(verificar_token)):
     return user
 
 
-@app.get("/api/auth/demo")
-def auth_demo():
-    """Demo access — read-only, no credentials required."""
-    return {
-        "usuario": "demo",
-        "nombre": "Visitante",
-        "rol": "observador",
-        "iniciales": "VT",
-    }
-
 
 # ============================================================
 # CONFIG ALERTAS

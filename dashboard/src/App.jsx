@@ -104,12 +104,8 @@ export default function App() {
   // Landing / Login screen
   const [showLogin, setShowLogin] = useState(false)
   if (!user) {
-    const enterDemo = () => login({
-      token: 'demo', usuario: 'demo', nombre: 'Visitante',
-      rol: 'observador', iniciales: 'VT', isDemo: true,
-    })
     if (showLogin) return <Suspense fallback={<Loading />}><LoginView onLogin={login} /></Suspense>
-    return <Suspense fallback={<Loading />}><LandingView onEnterDemo={enterDemo} onGoLogin={() => setShowLogin(true)} /></Suspense>
+    return <Suspense fallback={<Loading />}><LandingView onEnterDemo={() => setShowLogin(true)} onGoLogin={() => setShowLogin(true)} /></Suspense>
   }
 
   const isTabActive = (t) => {
