@@ -25,7 +25,7 @@ if not JWT_SECRET:
     JWT_SECRET = "agtech-dev-secret-change-me-in-production"
     logging.warning("JWT_SECRET not set — using insecure dev default. Set JWT_SECRET env var in production!")
 JWT_ALGORITHM = "HS256"
-JWT_EXPIRATION_HOURS = 72  # 3 días — práctico para trabajo en campo
+JWT_EXPIRATION_HOURS = 2
 
 security = HTTPBearer()
 
