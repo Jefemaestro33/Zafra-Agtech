@@ -46,7 +46,11 @@ export default function OverviewView({ predioId }) {
   if (!data) return null
 
   const { kpis, nodos, predio } = data
-  const center = [predio.lat || 20.759661, predio.lon || -103.511879]
+  const nodosConCoords = nodos.filter(n => n.lat && n.lon)
+  const center = nodosConCoords.length > 0
+    ? [nodosConCoords.reduce((s, n) => s + n.lat, 0) / nodosConCoords.length,
+       nodosConCoords.reduce((s, n) => s + n.lon, 0) / nodosConCoords.length]
+    : [predio.lat || 20.759661, predio.lon || -103.511879]
   const shapes = loadShapes(predioId)
   const tile = TILES[tileMode]
 
