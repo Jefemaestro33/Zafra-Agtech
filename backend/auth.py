@@ -6,6 +6,7 @@ Uso:
   from auth import verificar_token, USUARIOS
 """
 import os
+import json
 from datetime import datetime, timedelta, timezone
 
 import bcrypt
@@ -18,7 +19,9 @@ from pydantic import BaseModel
 # ============================================================
 # CONFIG
 # ============================================================
-JWT_SECRET = os.environ.get("JWT_SECRET", "agtech-nextipac-jwt-secret-2026")
+JWT_SECRET = os.environ.get("JWT_SECRET")
+if not JWT_SECRET:
+    raise RuntimeError("JWT_SECRET env var is required. Set it before starting the app.")
 JWT_ALGORITHM = "HS256"
 JWT_EXPIRATION_HOURS = 72  # 3 días — práctico para trabajo en campo
 
@@ -36,24 +39,52 @@ def _verify_pw(password: str, hashed: str) -> bool:
 # ============================================================
 # USUARIOS
 # ============================================================
-USUARIOS = {
-    "ernest": {
-        "nombre": "Ernest",
-        "usuario": "ernest",
-        "rol": "admin",
-        "iniciales": "ED",
-        # Contraseña: Nxt!p4c_Agr0-2026
-        "password_hash": _hash_pw("Nxt!p4c_Agr0-2026"),
-    },
-    "salvador": {
-        "nombre": "Salvador",
-        "usuario": "salvador",
-        "rol": "agronomo",
-        "iniciales": "SV",
-        # Contraseña: C4mpo_V3rde#Hass
-        "password_hash": _hash_pw("C4mpo_V3rde#Hass"),
-    },
-}
+def _load_users() -> dict:
+    """Load users from AUTH_USERS env var (JSON) or raise error."""
+    raw = os.environ.get("AUTH_USERS")
+    if raw:
+        try:
+            users_list = json.loads(raw)
+            return {
+                u["usuario"]: {
+                    "nombre": u["nombre"],
+                    "usuario": u["usuario"],
+                    "rol": u["rol"],
+                    "iniciales": u.get("iniciales", u["nombre"][:2].upper()),
+                    "password_hash": _hash_pw(u["password"]),
+                }
+                for u in users_list
+            }
+        except (json.JSONDecodeError, KeyError) as e:
+            raise RuntimeError(f"AUTH_USERS env var has invalid format: {e}")
+
+    # Dev fallback: require AUTH_USER_1 and AUTH_PASS_1 env vars
+    users = {}
+    i = 1
+    while True:
+        user = os.environ.get(f"AUTH_USER_{i}")
+        pw = os.environ.get(f"AUTH_PASS_{i}")
+        if not user or not pw:
+            break
+        name = os.environ.get(f"AUTH_NAME_{i}", user.capitalize())
+        role = os.environ.get(f"AUTH_ROLE_{i}", "admin")
+        users[user] = {
+            "nombre": name,
+            "usuario": user,
+            "rol": role,
+            "iniciales": name[:2].upper(),
+            "password_hash": _hash_pw(pw),
+        }
+        i += 1
+
+    if not users:
+        raise RuntimeError(
+            "No users configured. Set AUTH_USERS (JSON) or AUTH_USER_1/AUTH_PASS_1 env vars."
+        )
+    return users
+
+
+USUARIOS = _load_users()
 
 
 # ============================================================

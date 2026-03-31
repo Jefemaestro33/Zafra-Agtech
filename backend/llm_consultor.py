@@ -41,6 +41,10 @@ log = logging.getLogger("llm")
 
 DATABASE_URL = os.environ.get("DATABASE_URL", "")
 ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
+
+def _require_api_key():
+    if not ANTHROPIC_API_KEY:
+        raise RuntimeError("ANTHROPIC_API_KEY env var is required for LLM features.")
 MODEL = "claude-sonnet-4-5"
 PROMPTS_DIR = Path(__file__).parent / "prompts"
 
@@ -161,7 +165,11 @@ def _call_anthropic_api(system_prompt, messages, max_tokens=800):
     )
     response.raise_for_status()
     data = response.json()
-    return data["content"][0]["text"]
+    try:
+        return data["content"][0]["text"]
+    except (KeyError, IndexError, TypeError) as e:
+        log.error(f"Unexpected API response structure: {e}, response: {json.dumps(data)[:500]}")
+        raise RuntimeError(f"Anthropic API returned unexpected response: {e}")
 
 
 def consultar_llm(texto_resumen, tipo_prompt="phytophthora"):
@@ -254,10 +262,13 @@ def parsear_diagnostico(respuesta_llm):
         ("estado_general", H + r"ESTADO GENERAL:?\s*\n(.+?)(?=\n(?:#|POR BLOQUE|ALERTAS)|$)"),
     ]
 
-    for key, pattern in patterns:
-        match = re.search(pattern, respuesta_llm, re.DOTALL | re.IGNORECASE)
-        if match:
-            result[key] = match.group(1).strip()
+    try:
+        for key, pattern in patterns:
+            match = re.search(pattern, respuesta_llm, re.DOTALL | re.IGNORECASE)
+            if match:
+                result[key] = match.group(1).strip()
+    except re.error as e:
+        log.warning(f"Regex parsing failed: {e}")
 
     if not result:
         result["raw"] = respuesta_llm

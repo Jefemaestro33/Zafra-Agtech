@@ -68,15 +68,18 @@ app = FastAPI(
     version="0.3",
 )
 
+_allowed_origins = os.environ.get("ALLOWED_ORIGINS", "http://localhost:5173").split(",")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=_allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-DATABASE_URL = os.environ.get("DATABASE_URL", "")
+DATABASE_URL = os.environ.get("DATABASE_URL")
+if not DATABASE_URL:
+    raise RuntimeError("DATABASE_URL env var is required. Set it before starting the app.")
 
 
 # ============================================================
@@ -222,8 +225,10 @@ def crear_predio(datos: dict):
         if field not in datos or not str(datos[field]).strip():
             return JSONResponse(status_code=400, content={"error": f"Campo obligatorio: {field}"})
 
-    campos = ["nombre", "cultivo", "tipo_suelo", "hectareas", "municipio", "fecha_instalacion", "lat", "lon"]
-    values_dict = {k: datos.get(k) for k in campos if k in datos}
+    _PREDIO_COLUMNS = {"nombre", "cultivo", "tipo_suelo", "hectareas", "municipio", "fecha_instalacion", "lat", "lon"}
+    values_dict = {k: datos.get(k) for k in _PREDIO_COLUMNS if k in datos}
+    if not values_dict:
+        return JSONResponse(status_code=400, content={"error": "No se proporcionaron campos válidos"})
 
     cols = ", ".join(values_dict.keys())
     placeholders = ", ".join(["%s"] * len(values_dict))
@@ -409,14 +414,17 @@ def lecturas_nodo(
     intervalo: str = Query("5min", description="5min, 1h, o 1d"),
 ):
     # Defaults
-    if not hasta:
-        hasta_dt = datetime.now()
-    else:
-        hasta_dt = datetime.fromisoformat(hasta)
-    if not desde:
-        desde_dt = hasta_dt - timedelta(days=7)
-    else:
-        desde_dt = datetime.fromisoformat(desde)
+    try:
+        if not hasta:
+            hasta_dt = datetime.now()
+        else:
+            hasta_dt = datetime.fromisoformat(hasta)
+        if not desde:
+            desde_dt = hasta_dt - timedelta(days=7)
+        else:
+            desde_dt = datetime.fromisoformat(desde)
+    except ValueError as e:
+        raise HTTPException(400, f"Formato de fecha inválido: {e}")
 
     if intervalo == "5min":
         sql = """
@@ -582,7 +590,10 @@ def comparativo_predio(predio_id: int, dias: int = Query(30)):
                     "alarmas": cr["cusum_h10"]["alarmas"],
                 }
     except Exception as e:
-        pass  # CUSUM is optional, don't break the endpoint
+        import logging
+        logging.getLogger("api").warning(f"CUSUM analysis failed: {e}")
+        for item in resultado:
+            item["cusum_warning"] = "CUSUM analysis unavailable"
 
     return resultado
 
