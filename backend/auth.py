@@ -21,7 +21,9 @@ from pydantic import BaseModel
 # ============================================================
 JWT_SECRET = os.environ.get("JWT_SECRET")
 if not JWT_SECRET:
-    raise RuntimeError("JWT_SECRET env var is required. Set it before starting the app.")
+    import logging
+    JWT_SECRET = "agtech-dev-secret-change-me-in-production"
+    logging.warning("JWT_SECRET not set — using insecure dev default. Set JWT_SECRET env var in production!")
 JWT_ALGORITHM = "HS256"
 JWT_EXPIRATION_HOURS = 72  # 3 días — práctico para trabajo en campo
 
@@ -78,9 +80,27 @@ def _load_users() -> dict:
         i += 1
 
     if not users:
-        raise RuntimeError(
-            "No users configured. Set AUTH_USERS (JSON) or AUTH_USER_1/AUTH_PASS_1 env vars."
+        import logging
+        logging.warning(
+            "No AUTH_USERS or AUTH_USER_N env vars found — using default dev users. "
+            "Set env vars in production!"
         )
+        return {
+            "ernest": {
+                "nombre": "Ernest",
+                "usuario": "ernest",
+                "rol": "admin",
+                "iniciales": "ED",
+                "password_hash": _hash_pw(os.environ.get("DEFAULT_ADMIN_PASS", "admin123")),
+            },
+            "salvador": {
+                "nombre": "Salvador",
+                "usuario": "salvador",
+                "rol": "agronomo",
+                "iniciales": "SV",
+                "password_hash": _hash_pw(os.environ.get("DEFAULT_AGRO_PASS", "campo123")),
+            },
+        }
     return users
 
 

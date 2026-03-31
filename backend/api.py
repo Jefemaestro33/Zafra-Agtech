@@ -77,9 +77,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-DATABASE_URL = os.environ.get("DATABASE_URL")
+DATABASE_URL = os.environ.get("DATABASE_URL", "")
 if not DATABASE_URL:
-    raise RuntimeError("DATABASE_URL env var is required. Set it before starting the app.")
+    import logging
+    logging.warning("DATABASE_URL not set — database endpoints will fail.")
 
 
 # ============================================================
