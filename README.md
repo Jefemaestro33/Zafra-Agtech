@@ -15,6 +15,7 @@ Plataforma de agricultura inteligente diseñada para servir a agricultores de to
 | Balance hídrico | Recetas de riego prescriptivas (litros/árbol, hora, Kc mensual) |
 | Calibración | Corrección gravimétrica + temperatura por predio |
 | WhatsApp | Pipeline Meta Cloud API (cronjobs diarios/horarios/semanales) |
+| Ingesta hardware | MQTT/HTTP receiver: gateway RAK → parse binario → calibrar → PostgreSQL |
 | Clima | Open-Meteo API + ETo Penman-Monteith FAO |
 | ML | scikit-learn Random Forest (14 features → 5 targets microbioma) |
 | Dashboard | React 19 + Vite 8 + Tailwind CSS v4 + Recharts + react-leaflet |
@@ -82,7 +83,8 @@ Dashboard en http://localhost:5173
 
 | Componente | Estado |
 |------------|--------|
-| Backend Python (13 modulos, 44+ endpoints, ~6,500+ LOC) | Listo |
+| Backend Python (14 modulos, 44+ endpoints, ~7,000+ LOC) | Listo |
+| Pipeline ingesta hardware (MQTT + HTTP, parse binario, calibración) | Listo |
 | Dashboard React (14 vistas funcionales + landing, ~6,600 LOC) | Listo |
 | Autenticacion JWT (4 usuarios, 3 roles, rate limiting) | Listo |
 | Landing page publica | Listo |
