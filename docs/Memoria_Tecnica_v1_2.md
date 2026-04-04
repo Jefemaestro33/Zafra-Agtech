@@ -49,7 +49,7 @@ Pendiente: hardware en campo y datos reales (estimado junio 2026 con financiamie
 
 ## 2. ESTADO ACTUAL — Lo que esta construido y funcionando (30 marzo 2026)
 
-### 2.1 Backend Python (13 modulos, ~6,500+ lineas)
+### 2.1 Backend Python (14 modulos, ~7,000+ lineas)
 
 | Modulo | Lineas | Funcion | Estado |
 |--------|--------|---------|--------|
@@ -65,9 +65,10 @@ Pendiente: hardware en campo y datos reales (estimado junio 2026 con financiamie
 | `modelo_microbioma.py` | ~410 | Random Forest (14 features → 5 targets), 5-Fold CV, prediccion on-demand. **v2: disclaimer datos sinteticos, plan reentrenamiento** | Produccion |
 | `auth.py` | ~170 | Autenticacion JWT (2h expiracion), usuarios desde env vars, bcrypt, rate limiting | Produccion |
 | `db.py` | ~45 | Modulo compartido de conexion a PostgreSQL (get_conn, query, execute) | Produccion |
+| `ingesta.py` | ~450 | **NUEVO v2.** Pipeline hardware: MQTT/HTTP → parse binario 23 bytes → calibracion → PostgreSQL → alertas + WhatsApp. Auto-deteccion riego vs lluvia | Listo |
 | `config_alertas.py` | ~70 | Configuracion personalizable de umbrales de alerta (JSON) | Produccion |
 
-### 2.2 Dashboard React (20 vistas, 5 componentes base, ~6,600 lineas JSX/JS/CSS)
+### 2.2 Dashboard React (20 vistas, 7 componentes base, ~7,000 lineas JSX/JS/CSS)
 
 | Vista | Ruta | Contenido | Estado |
 |-------|------|-----------|--------|
@@ -89,12 +90,14 @@ Pendiente: hardware en campo y datos reales (estimado junio 2026 con financiamie
 | Config respaldos | `/config/respaldos` | Respaldos de base de datos | Funcional |
 | Placeholders | varias | Vista con badge "Proximamente" para: Agronomos, Usuarios, Historial, Contabilidad, Finanzas | Placeholder |
 
-**Componentes base (5):**
+**Componentes base (7):**
 - `KpiCard` — trend indicator opcional, Lucide icons, glow backgrounds por color, hover lift
 - `ScoreBadge` — Shield icons por nivel (ShieldCheck/Shield/ShieldAlert/ShieldX), pulse animation en CRITICO
 - `Loading` — Skeleton loaders dark-themed (KPIs + chart + tabla)
 - `EmptyState` — Contenedor dark con icono centrado (Lucide o string) + titulo + descripcion
 - `ErrorBoundary` — Captura errores de render en componentes hijos, muestra mensaje con boton "Reintentar"
+- `Toast` — **NUEVO v2.** Sistema global de notificaciones (success/error/warning/info), auto-dismiss 3.5s, animaciones entrada/salida, ToastProvider context, integrado con useApi para feedback de errores automatico
+- `ProfileMenu` — **NUEVO v2.** Menu de perfil extraido de App.jsx, elimina duplicacion de codigo, usado en sidebar expandido y colapsado
 
 **Layout:**
 - Sidebar colapsable (220px expandido → 60px icon rail) con toggle ChevronsLeft/Right
