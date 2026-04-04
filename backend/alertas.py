@@ -1,7 +1,10 @@
 """
 alertas.py — Motor de reglas del sistema AgTech
-Evalúa cada nodo contra umbrales, calcula Score Phytophthora v2,
+Evalúa cada nodo contra umbrales, calcula Score Phytophthora v3,
 y guarda eventos en la tabla eventos.
+
+v3 (abril 2026): 10 factores, interacción saturación×temp, integra τ,
+saturación dual, pesos calibrados, corrección gravimétrica.
 
 Modos CLI:
   python alertas.py --evaluar          Evaluar todos los nodos, tabla de scores
@@ -18,6 +21,8 @@ from datetime import datetime, timedelta
 import psycopg2
 from psycopg2.extras import RealDictCursor
 
+from calibracion import corregir_lectura, get_calibracion, get_umbral
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [alertas] %(levelname)s %(message)s",
@@ -26,7 +31,7 @@ logging.basicConfig(
 log = logging.getLogger("alertas")
 
 # ============================================================
-# CONFIGURACIÓN
+# CONFIGURACIÓN (fallbacks — se prefieren valores de calibracion.py)
 # ============================================================
 UMBRAL_RIEGO = 28.0          # % VWC — debajo de esto, necesita riego
 UMBRAL_BATERIA = 3.3         # V
@@ -180,54 +185,86 @@ def calcular_horas_humedo(conn, nodo_id, umbral_vwc=40.0):
     return round(horas, 2)
 
 
+def get_ultimo_tau(conn, nodo_id):
+    """Obtiene el último tau_10 calculado para el nodo (de firma_hidrica)."""
+    sql = """
+        SELECT tau_10 FROM firma_hidrica
+        WHERE nodo_id = %s AND tau_10 IS NOT NULL
+        ORDER BY evento_riego DESC LIMIT 1
+    """
+    with conn.cursor() as cur:
+        cur.execute(sql, (nodo_id,))
+        row = cur.fetchone()
+    return row[0] if row else None
+
+
 def calcular_score_phytophthora(conn, nodo_id):
     """
-    Score de riesgo Phytophthora cinnamomi (0-100).
+    Score de riesgo Phytophthora cinnamomi v3 (0-100).
+    10 factores + interacción multiplicativa.
+
+    Cambios vs v2:
+      - h20 pesa más que h10 (zona radicular)
+      - Factor 8: τ estructura del suelo (integra firma hídrica)
+      - Factor 9: saturación dual (ambas profundidades)
+      - Factor 10: interacción saturación × temperatura (multiplicador ×1.3)
+      - Umbrales desde calibracion.py (calibrados por predio)
+
     Retorna (score, desglose_dict).
     """
     ultima = get_ultima_lectura(conn, nodo_id)
     if not ultima:
         return 0, {"error": "sin lecturas"}
 
-    h10 = ultima["h10_avg"] or 0
-    h20 = ultima["h20_avg"] or 0
-    t20 = ultima["t20"] or 0
+    cal = get_calibracion()
+
+    # Aplicar corrección gravimétrica + temperatura
+    t20_raw = ultima["t20"] or 0
+    h10 = corregir_lectura(ultima["h10_avg"], t20_raw, 10) or 0
+    h20 = corregir_lectura(ultima["h20_avg"], t20_raw, 20) or 0
+    t20 = t20_raw
+
+    umbral_sat = cal["vwc_saturacion"]
+    umbral_mod = cal["vwc_capacidad_campo"] + 2  # ligeramente arriba de CC
 
     desglose = {}
     score = 0
 
-    # Factor 1: Humedad 10cm
-    if h10 > 45:
-        pts = 15
-    elif h10 > 40:
-        pts = 8
+    # Factor 1: Humedad 10cm (peso reducido — zona superficial)
+    if h10 > umbral_sat:
+        pts = 10
+    elif h10 > umbral_mod:
+        pts = 5
     else:
         pts = 0
-    desglose["humedad_10cm"] = {"valor": round(h10, 2), "puntos": pts, "umbral": ">45=15, >40=8"}
+    desglose["humedad_10cm"] = {"valor": round(h10, 2), "puntos": pts,
+                                 "umbral": f">{umbral_sat:.0f}=10, >{umbral_mod:.0f}=5"}
     score += pts
 
-    # Factor 2: Humedad 20cm
-    if h20 > 45:
-        pts = 15
-    elif h20 > 40:
-        pts = 8
+    # Factor 2: Humedad 20cm (peso aumentado — zona radicular)
+    if h20 > umbral_sat:
+        pts = 20
+    elif h20 > umbral_mod:
+        pts = 10
     else:
         pts = 0
-    desglose["humedad_20cm"] = {"valor": round(h20, 2), "puntos": pts, "umbral": ">45=15, >40=8"}
+    desglose["humedad_20cm"] = {"valor": round(h20, 2), "puntos": pts,
+                                 "umbral": f">{umbral_sat:.0f}=20, >{umbral_mod:.0f}=10"}
     score += pts
 
-    # Factor 3: Temperatura suelo 20cm
+    # Factor 3: Temperatura suelo 20cm (óptimo P. cinnamomi)
     if 22 <= t20 <= 28:
         pts = 20
     elif 15 <= t20 < 22:
         pts = 10
     else:
         pts = 0
-    desglose["temperatura_20cm"] = {"valor": round(t20, 2), "puntos": pts, "umbral": "22-28=20, 15-22=10"}
+    desglose["temperatura_20cm"] = {"valor": round(t20, 2), "puntos": pts,
+                                     "umbral": "22-28=20, 15-22=10"}
     score += pts
 
     # Factor 4: Horas húmedo continuas
-    horas_humedo = calcular_horas_humedo(conn, nodo_id)
+    horas_humedo = calcular_horas_humedo(conn, nodo_id, umbral_vwc=umbral_mod)
     if horas_humedo > 72:
         pts = 15
     elif horas_humedo > 48:
@@ -236,7 +273,8 @@ def calcular_score_phytophthora(conn, nodo_id):
         pts = 5
     else:
         pts = 0
-    desglose["horas_humedo"] = {"valor": horas_humedo, "puntos": pts, "umbral": ">72=15, >48=10, >24=5"}
+    desglose["horas_humedo"] = {"valor": horas_humedo, "puntos": pts,
+                                 "umbral": ">72=15, >48=10, >24=5"}
     score += pts
 
     # Factor 5: Precipitación acumulada 7 días
@@ -247,7 +285,8 @@ def calcular_score_phytophthora(conn, nodo_id):
         pts = 5
     else:
         pts = 0
-    desglose["precip_7d"] = {"valor": round(precip_7d, 2), "puntos": pts, "umbral": ">50=10, >25=5"}
+    desglose["precip_7d"] = {"valor": round(precip_7d, 2), "puntos": pts,
+                              "umbral": ">50=10, >25=5"}
     score += pts
 
     # Factor 6: Pronóstico lluvia 48h
@@ -256,7 +295,8 @@ def calcular_score_phytophthora(conn, nodo_id):
         pts = 5
     else:
         pts = 0
-    desglose["pronostico_48h"] = {"valor": round(pronostico, 2), "puntos": pts, "umbral": ">20mm=5"}
+    desglose["pronostico_48h"] = {"valor": round(pronostico, 2), "puntos": pts,
+                                   "umbral": ">20mm=5"}
     score += pts
 
     # Factor 7: HR ambiente promedio 48h
@@ -265,8 +305,56 @@ def calcular_score_phytophthora(conn, nodo_id):
         pts = 5
     else:
         pts = 0
-    desglose["hr_ambiente_48h"] = {"valor": round(hr_48h, 2), "puntos": pts, "umbral": ">80%=5"}
+    desglose["hr_ambiente_48h"] = {"valor": round(hr_48h, 2), "puntos": pts,
+                                    "umbral": ">80%=5"}
     score += pts
+
+    # Factor 8 (NUEVO v3): τ estructura del suelo
+    ultimo_tau = get_ultimo_tau(conn, nodo_id)
+    tau_lento = cal.get("tau_lento", 24.0)
+    tau_moderado = cal.get("tau_moderado", 18.0)
+    if ultimo_tau is not None:
+        if ultimo_tau > tau_lento:
+            pts = 10
+        elif ultimo_tau > tau_moderado:
+            pts = 5
+        else:
+            pts = 0
+        desglose["tau_estructura"] = {
+            "valor": round(ultimo_tau, 2), "puntos": pts,
+            "umbral": f">{tau_lento:.0f}h=10, >{tau_moderado:.0f}h=5"
+        }
+        score += pts
+    else:
+        desglose["tau_estructura"] = {"valor": None, "puntos": 0,
+                                       "umbral": "sin datos de firma hídrica"}
+
+    # Factor 9 (NUEVO v3): Saturación dual (ambas profundidades)
+    if h10 > umbral_sat and h20 > umbral_sat:
+        pts = 10
+        desglose["saturacion_dual"] = {
+            "valor": f"h10={h10:.1f}, h20={h20:.1f}", "puntos": pts,
+            "umbral": f"ambos >{umbral_sat:.0f}"
+        }
+        score += pts
+    else:
+        desglose["saturacion_dual"] = {"valor": None, "puntos": 0,
+                                        "umbral": f"ambos >{umbral_sat:.0f}"}
+
+    # Factor 10 (NUEVO v3): Interacción saturación × temperatura
+    es_saturado = (h10 > umbral_sat) or (h20 > umbral_sat)
+    es_temp_optima = 22 <= t20 <= 28
+    if es_saturado and es_temp_optima:
+        bonus = int(score * 0.3)  # 30% bonus multiplicativo
+        desglose["interaccion_sat_temp"] = {
+            "valor": f"saturado={es_saturado}, temp_optima={es_temp_optima}",
+            "puntos": bonus,
+            "umbral": "×1.3 si saturación + 22-28°C"
+        }
+        score += bonus
+    else:
+        desglose["interaccion_sat_temp"] = {"valor": None, "puntos": 0,
+                                             "umbral": "×1.3 si saturación + 22-28°C"}
 
     score = min(score, 100)
 
@@ -282,6 +370,7 @@ def calcular_score_phytophthora(conn, nodo_id):
 
     desglose["score_total"] = score
     desglose["nivel"] = nivel
+    desglose["version"] = "v3"
 
     return score, desglose
 
@@ -450,6 +539,54 @@ def generar_resumen_nodo(conn, nodo_id):
         """, (nodo_id,))
         microbioma_reciente = cur.fetchall()
 
+    # Tratamientos recientes (NUEVO v2)
+    tratamientos_recientes = []
+    try:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("""
+                SELECT fecha, tipo, producto, cantidad, unidad
+                FROM tratamientos WHERE nodo_id = %s
+                ORDER BY fecha DESC LIMIT 5
+            """, (nodo_id,))
+            for t in cur.fetchall():
+                tratamientos_recientes.append({
+                    "fecha": str(t["fecha"]),
+                    "tipo": t["tipo"],
+                    "producto": t.get("producto"),
+                    "cantidad": float(t["cantidad"]) if t.get("cantidad") else None,
+                    "unidad": t.get("unidad"),
+                })
+    except Exception:
+        pass
+
+    # Balance hídrico (NUEVO v2)
+    balance_info = None
+    try:
+        from balance_hidrico import calcular_balance
+        balance_info = calcular_balance(conn, nodo_id)
+    except Exception:
+        pass
+
+    # Diagnósticos previos (NUEVO v2)
+    diagnosticos_previos = []
+    try:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("""
+                SELECT tiempo, datos->'diagnostico_ia'->>'diagnostico' as dx
+                FROM eventos
+                WHERE nodo_id = %s AND procesado = TRUE
+                  AND datos->'diagnostico_ia' IS NOT NULL
+                ORDER BY tiempo DESC LIMIT 3
+            """, (nodo_id,))
+            for h in cur.fetchall():
+                if h["dx"]:
+                    diagnosticos_previos.append({
+                        "fecha": str(h["tiempo"]),
+                        "diagnostico": h["dx"],
+                    })
+    except Exception:
+        pass
+
     resumen = {
         "nodo_id": nodo_id,
         "nombre": info["nombre"],
@@ -483,6 +620,9 @@ def generar_resumen_nodo(conn, nodo_id):
             }
             for m in microbioma_reciente
         ] if microbioma_reciente else [],
+        "tratamientos_recientes": tratamientos_recientes,
+        "balance_hidrico": balance_info,
+        "diagnosticos_previos": diagnosticos_previos,
     }
 
     return resumen

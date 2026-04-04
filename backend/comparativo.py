@@ -124,8 +124,17 @@ def calcular_medias_diarias(conn, predio_id=1, dias=180):
             if trat.get("h10") is not None and test.get("h10") is not None:
                 delta_h10 = round(trat["h10"] - test["h10"], 4)
 
+            # Delta EC (NUEVO v2) — actividad microbiana / nutrientes
+            delta_ec30 = None
+            if trat.get("ec30") is not None and test.get("ec30") is not None:
+                delta_ec30 = round(trat["ec30"] - test["ec30"], 4)
+
+            # Delta T20 (NUEVO v2) — inercia térmica (indica contenido de agua)
+            delta_t20 = None
+            if trat.get("t20") is not None and test.get("t20") is not None:
+                delta_t20 = round(trat["t20"] - test["t20"], 4)
+
             # Tau: find the week this day belongs to
-            # Monday of the week
             dia_dt = datetime.strptime(dia, "%Y-%m-%d")
             semana_key = str((dia_dt - timedelta(days=dia_dt.weekday())).date())
             trat_tau = tau_index.get((bloque, "tratamiento", semana_key))
@@ -139,6 +148,8 @@ def calcular_medias_diarias(conn, predio_id=1, dias=180):
                 "trat_h10": trat.get("h10"),
                 "test_h10": test.get("h10"),
                 "delta_h10": delta_h10,
+                "delta_ec30": delta_ec30,
+                "delta_t20": delta_t20,
                 "trat_tau10": trat_tau,
                 "test_tau10": test_tau,
                 "delta_tau10": delta_tau,
@@ -242,12 +253,18 @@ def analizar_bloques(conn, predio_id=1, dias=180):
         tau_valid = sum(1 for d in deltas_tau if not np.isnan(d))
         cusum_tau10 = cusum(deltas_tau) if tau_valid > 35 else None
 
+        # CUSUM EC30 (NUEVO v2) — actividad microbiana
+        deltas_ec = [d["delta_ec30"] if d["delta_ec30"] is not None else float("nan") for d in dias_data]
+        ec_valid = sum(1 for d in deltas_ec if not np.isnan(d))
+        cusum_ec30 = cusum(deltas_ec) if ec_valid > 35 else None
+
         # Estado
         alarmas_h10 = cusum_h10["alarmas"]
         estado = "normal"
         desde_dia = None
         magnitud = None
         tipo = None
+        tipo_legible = None
 
         if alarmas_h10:
             primera = alarmas_h10[0]
@@ -256,17 +273,49 @@ def analizar_bloques(conn, predio_id=1, dias=180):
             magnitud = primera["magnitud"]
             tipo = primera["tipo"]
 
+            # Nombres legibles (NUEVO v2)
+            if tipo == "incremento":
+                tipo_legible = "tratamiento_retiene_mas_agua"
+            elif tipo == "decremento":
+                tipo_legible = "tratamiento_drena_mejor"
+
+        # Efecto tamaño (NUEVO v2) — magnitud práctica de la divergencia
+        efecto_promedio = None
+        interpretacion = None
+        if alarmas_h10:
+            idx_primera = alarmas_h10[0]["dia"]
+            deltas_post = [d for d in deltas_h10[idx_primera:] if not np.isnan(d)]
+            if deltas_post:
+                efecto_promedio = round(float(np.mean(deltas_post)), 2)
+                if efecto_promedio < 0:
+                    interpretacion = (
+                        f"Parcelas tratamiento tienen en promedio "
+                        f"{abs(efecto_promedio):.1f}% VWC menos que testigo. "
+                        f"Sugiere mejor drenaje (efecto positivo del tratamiento)."
+                    )
+                else:
+                    interpretacion = (
+                        f"Parcelas tratamiento tienen en promedio "
+                        f"{efecto_promedio:.1f}% VWC más que testigo. "
+                        f"Monitorear — podría indicar problema de drenaje."
+                    )
+
         resultados.append({
             "bloque": bloque,
             "estado": estado,
             "desde_dia": desde_dia,
             "magnitud": magnitud,
             "tipo": tipo,
+            "tipo_legible": tipo_legible,
+            "efecto_promedio_vwc": efecto_promedio,
+            "interpretacion": interpretacion,
             "total_alarmas": len(alarmas_h10),
             "cusum_h10": cusum_h10,
             "cusum_tau10": cusum_tau10,
+            "cusum_ec30": cusum_ec30,
             "dias": dias_labels,
             "deltas_h10": [round(d, 4) if not np.isnan(d) else None for d in deltas_h10],
+            "deltas_ec30": [round(d, 4) if not np.isnan(d) else None for d in deltas_ec],
         })
 
     return resultados

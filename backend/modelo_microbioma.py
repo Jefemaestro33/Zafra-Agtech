@@ -2,6 +2,21 @@
 modelo_microbioma.py — Random Forest: sensor features → microbiome prediction
 Predice estado microbiano (qPCR copias/g, respiración) desde datos de sensores.
 
+NOTA IMPORTANTE: Este modelo está entrenado con datos sintéticos.
+Los resultados son INDICATIVOS para demostración, NO predictivos.
+El modelo real se reentrenará con datos de laboratorio (qPCR) a partir
+del mes 6 del piloto. R² con datos sintéticos no es transferible a datos reales.
+
+El valor principal de este módulo es el DATASET pareado (sensor + qPCR),
+no las predicciones del modelo. El dataset es la propiedad intelectual.
+
+Plan de reentrenamiento:
+  - Mes 1-3:  Solo recolectar datos. No entrenar.
+  - Mes 4-6:  Análisis exploratorio. Correlaciones simples (Pearson).
+  - Mes 7-9:  Primer modelo simple (regresión lineal, 3-5 features).
+  - Mes 10-12: Comparar lineal vs RF. Publicar resultados.
+  - Mes 13-18: Modelo final con validación cruzada robusta.
+
 CLI:
   python modelo_microbioma.py --entrenar      Entrenar modelos por target
   python modelo_microbioma.py --predecir 3    Predecir estado actual del nodo 3
@@ -372,8 +387,12 @@ def main():
                     print(f"{target:20s}  {'—':>8}  {'—':>12}  {'—':>8}")
 
             print()
-            print("Modelo entrenado con datos sintéticos — NO válido para predicciones reales.")
-            print("El modelo real se entrena con datos de laboratorio a partir del mes 6 del piloto.")
+            print("=" * 70)
+            print("DISCLAIMER: Modelo entrenado con DATOS SINTÉTICOS.")
+            print("R² reportado NO es transferible a datos reales.")
+            print("El valor principal es el DATASET pareado (sensor + qPCR),")
+            print("no las predicciones. Reentrenar con datos de lab mes 6+.")
+            print("=" * 70)
 
         elif args.predecir is not None:
             log.info("Entrenando modelos para predicción...")

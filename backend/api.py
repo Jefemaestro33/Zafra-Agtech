@@ -1040,6 +1040,149 @@ def health():
 
 
 # ============================================================
+# BALANCE HÍDRICO (NUEVO v2)
+# ============================================================
+@app.get("/api/nodos/{nodo_id}/balance")
+def get_balance_nodo(nodo_id: int, user=Depends(verificar_token)):
+    """Balance hídrico y receta de riego para un nodo."""
+    try:
+        from balance_hidrico import calcular_balance, generar_receta_whatsapp
+        with get_conn() as conn:
+            resultado = calcular_balance(conn, nodo_id)
+            resultado["mensaje_whatsapp"] = generar_receta_whatsapp(resultado)
+            return resultado
+    except Exception as e:
+        raise HTTPException(500, str(e))
+
+
+@app.get("/api/predios/{predio_id}/balance")
+def get_balance_predio(predio_id: int, user=Depends(verificar_token)):
+    """Balance hídrico consolidado del predio."""
+    try:
+        from balance_hidrico import resumen_predio, generar_receta_predio_whatsapp
+        with get_conn() as conn:
+            resumen = resumen_predio(conn, predio_id)
+            resumen["mensaje_whatsapp"] = generar_receta_predio_whatsapp(resumen)
+            return resumen
+    except Exception as e:
+        raise HTTPException(500, str(e))
+
+
+# ============================================================
+# RIEGOS (NUEVO v2)
+# ============================================================
+class RiegoRequest(BaseModel):
+    predio_id: int = 1
+    metodo: str = "manguera"
+    duracion_min: Optional[float] = None
+    volumen_litros: Optional[float] = None
+    mm_estimados: Optional[float] = None
+    zona: str = "todo"
+    notas: Optional[str] = None
+
+
+@app.post("/api/riegos")
+def registrar_riego(riego: RiegoRequest, user=Depends(verificar_token)):
+    """Registrar un evento de riego."""
+    try:
+        with get_conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute("""
+                    INSERT INTO riegos (predio_id, metodo, duracion_min, volumen_litros,
+                                       mm_estimados, zona, registrado_por, notas)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                    RETURNING id, tiempo
+                """, (
+                    riego.predio_id, riego.metodo, riego.duracion_min,
+                    riego.volumen_litros, riego.mm_estimados,
+                    riego.zona, user.get("sub", "api"), riego.notas,
+                ))
+                row = cur.fetchone()
+            conn.commit()
+            return {"id": row[0], "tiempo": str(row[1]), "status": "registrado"}
+    except psycopg2.errors.UndefinedTable:
+        raise HTTPException(400, "Tabla 'riegos' no existe. Ejecutar migración 002.")
+    except Exception as e:
+        raise HTTPException(500, str(e))
+
+
+@app.get("/api/riegos")
+def get_riegos(predio_id: int = Query(1), dias: int = Query(30), user=Depends(verificar_token)):
+    """Historial de riegos."""
+    try:
+        rows = query("""
+            SELECT id, tiempo, metodo, duracion_min, volumen_litros,
+                   mm_estimados, zona, registrado_por, notas
+            FROM riegos WHERE predio_id = %s
+              AND tiempo >= NOW() - interval '%s days'
+            ORDER BY tiempo DESC
+        """, (predio_id, dias))
+        for r in rows:
+            r["tiempo"] = str(r["tiempo"])
+        return rows
+    except psycopg2.errors.UndefinedTable:
+        return []
+
+
+# ============================================================
+# ANÁLISIS FOLIAR (NUEVO v2)
+# ============================================================
+class FoliarRequest(BaseModel):
+    predio_id: int = 1
+    fecha_muestreo: str
+    parametro: str
+    valor: float
+    unidad: str = "ppm"
+    rango_min: Optional[float] = None
+    rango_max: Optional[float] = None
+    estado: Optional[str] = None
+    notas: Optional[str] = None
+
+
+@app.post("/api/analisis-foliar")
+def registrar_foliar(data: FoliarRequest, user=Depends(verificar_token)):
+    """Registrar resultado de análisis foliar."""
+    try:
+        with get_conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute("""
+                    INSERT INTO analisis_foliar
+                        (predio_id, fecha_muestreo, parametro, valor, unidad,
+                         rango_min, rango_max, estado, notas)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    RETURNING id
+                """, (
+                    data.predio_id, data.fecha_muestreo, data.parametro,
+                    data.valor, data.unidad, data.rango_min, data.rango_max,
+                    data.estado, data.notas,
+                ))
+                row = cur.fetchone()
+            conn.commit()
+            return {"id": row[0], "status": "registrado"}
+    except psycopg2.errors.UndefinedTable:
+        raise HTTPException(400, "Tabla 'analisis_foliar' no existe. Ejecutar migración 002.")
+    except Exception as e:
+        raise HTTPException(500, str(e))
+
+
+@app.get("/api/analisis-foliar")
+def get_analisis_foliar(predio_id: int = Query(1), user=Depends(verificar_token)):
+    """Resultados de análisis foliar."""
+    try:
+        rows = query("""
+            SELECT id, fecha_muestreo, parametro, valor, unidad,
+                   rango_min, rango_max, estado, notas
+            FROM analisis_foliar WHERE predio_id = %s
+            ORDER BY fecha_muestreo DESC, parametro
+        """, (predio_id,))
+        for r in rows:
+            r["fecha_muestreo"] = str(r["fecha_muestreo"])
+        return rows
+    except psycopg2.errors.UndefinedTable:
+        return []
+
+
+# ============================================================
 # STATIC FILES (dashboard React build)
 # ============================================================
 # Try relative to backend/ (local dev), then relative to /app (Docker)

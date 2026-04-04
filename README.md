@@ -11,7 +11,10 @@ Plataforma de agricultura inteligente diseñada para servir a agricultores de to
 | Base de datos | PostgreSQL 15 (Railway) con indices + FK |
 | Backend API | Python 3.13 + FastAPI (36 endpoints REST) |
 | Autenticacion | JWT (2h) + bcrypt + rate limiting |
-| Motor de alertas | Score Phytophthora v2 (7 factores, cruza suelo + clima) |
+| Motor de alertas | Score Phytophthora v3 (10 factores, interacciones multiplicativas) |
+| Balance hídrico | Recetas de riego prescriptivas (litros/árbol, hora, Kc mensual) |
+| Calibración | Corrección gravimétrica + temperatura por predio |
+| WhatsApp | Pipeline Meta Cloud API (cronjobs diarios/horarios/semanales) |
 | Clima | Open-Meteo API + ETo Penman-Monteith FAO |
 | ML | scikit-learn Random Forest (14 features → 5 targets microbioma) |
 | Dashboard | React 19 + Vite 8 + Tailwind CSS v4 + Recharts + react-leaflet |
@@ -79,7 +82,7 @@ Dashboard en http://localhost:5173
 
 | Componente | Estado |
 |------------|--------|
-| Backend Python (10 modulos, 36 endpoints, ~4,220 LOC) | Listo |
+| Backend Python (13 modulos, 44+ endpoints, ~6,500+ LOC) | Listo |
 | Dashboard React (14 vistas funcionales + landing, ~6,600 LOC) | Listo |
 | Autenticacion JWT (4 usuarios, 3 roles, rate limiting) | Listo |
 | Landing page publica | Listo |
@@ -87,7 +90,10 @@ Dashboard en http://localhost:5173
 | Exportacion CSV (lecturas, alertas, firma) | Listo |
 | PostgreSQL en Railway (8 tablas, 420K+ registros, indices + FK) | Listo |
 | 11 alertas realistas con contexto narrativo | Listo |
-| Score Phytophthora v2 + desglose visual | Listo |
+| Score Phytophthora v3 (10 factores + interacciones) | Listo |
+| Balance hídrico prescriptivo (Kc, ETo, recetas) | Listo |
+| Calibración gravimétrica + corrección temperatura | Listo |
+| Pipeline WhatsApp (Meta Cloud API + cronjobs) | Listo (pendiente env vars) |
 | Firma hidrica (tau, vel, BP) | Listo |
 | CUSUM tratamiento vs testigo | Listo |
 | Random Forest microbioma (5-Fold CV) | Listo |
@@ -95,7 +101,7 @@ Dashboard en http://localhost:5173
 | Firmware ESP32 con retry LoRa | Listo |
 | Error boundaries + lazy loading + code splitting | Listo |
 | Seguridad (CORS, SQL validation, response validation) | Listo |
-| Pipeline WhatsApp (alertas automaticas) | Pendiente (falta numero) |
+| Pipeline WhatsApp (codigo completo, Meta Cloud API) | Listo (pendiente numero + token) |
 | Dominio propio + correo con dominio | Pendiente |
 | Hardware + campo | Pendiente (financiamiento junio 2026) |
 | Gestion de agronomos y usuarios | Pendiente |

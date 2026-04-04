@@ -3,6 +3,9 @@ firma_hidrica.py — Cálculo de firma hídrica por evento de riego
 Detecta eventos de mojado en datos de sensores, calcula velocidad de
 infiltración, constante de secado (τ), y breaking point dinámico.
 
+v2 (abril 2026): filtro de mediana anti-ruido, corrección por temperatura,
+modelo biexponencial opcional para andisoles.
+
 CLI:
   python firma_hidrica.py --nodo 1       Procesa todas las firmas del nodo 1
   python firma_hidrica.py --todos        Procesa todos los nodos
@@ -20,6 +23,8 @@ from contextlib import contextmanager
 import numpy as np
 import psycopg2
 from psycopg2.extras import RealDictCursor
+
+from calibracion import corregir_lectura
 
 try:
     from scipy.optimize import curve_fit
@@ -60,15 +65,52 @@ def get_conn():
 
 
 # ============================================================
+# 0. FILTROS ANTI-RUIDO (NUEVO v2)
+# ============================================================
+def _filtrar_mediana(valores, ventana=7):
+    """
+    Filtro de mediana móvil para eliminar spikes de sensores capacitivos.
+    Ventana de 7 lecturas = 35 minutos — elimina ruido sin perder señal de riego.
+    """
+    resultado = np.copy(valores)
+    half = ventana // 2
+    for i in range(half, len(valores) - half):
+        segmento = valores[i - half:i + half + 1]
+        segmento_limpio = segmento[~np.isnan(segmento)]
+        if len(segmento_limpio) > 0:
+            resultado[i] = np.median(segmento_limpio)
+    return resultado
+
+
+def _aplicar_correcciones(rows):
+    """
+    Aplica corrección por temperatura a las lecturas crudas.
+    Retorna rows con h10/h20/h30 corregidos.
+    """
+    corrected = []
+    for row in rows:
+        tiempo, h10, h20, h30 = row[0], row[1], row[2], row[3]
+        # Obtener t20 si está disponible (posición 4 si existe)
+        t20 = row[4] if len(row) > 4 else None
+        h10_c = corregir_lectura(h10, t20, 10) if h10 is not None else None
+        h20_c = corregir_lectura(h20, t20, 20) if h20 is not None else None
+        h30_c = corregir_lectura(h30, t20, 30) if h30 is not None else None
+        corrected.append((tiempo, h10_c, h20_c, h30_c))
+    return corrected
+
+
+# ============================================================
 # 1. DETECTAR EVENTOS DE MOJADO
 # ============================================================
 def detectar_eventos_mojado(conn, nodo_id, dias=180, umbral_delta=3.0):
     """
     Busca incrementos súbitos de h10 entre lecturas consecutivas (5 min).
     Filtra eventos separados por al menos 6 horas.
+
+    v2: Aplica corrección por temperatura y filtro de mediana antes de detección.
     """
     sql = """
-        SELECT tiempo, h10_avg, h20_avg, h30_avg
+        SELECT tiempo, h10_avg, h20_avg, h30_avg, t20
         FROM lecturas
         WHERE nodo_id = %s
           AND tiempo >= (SELECT MAX(tiempo) FROM lecturas) - interval '%s days'
@@ -81,14 +123,22 @@ def detectar_eventos_mojado(conn, nodo_id, dias=180, umbral_delta=3.0):
     if len(rows) < 2:
         return []
 
+    # Aplicar corrección por temperatura
+    rows_corr = _aplicar_correcciones(rows)
+
+    # Extraer h10 corregido y aplicar filtro de mediana
+    h10_array = np.array([r[1] if r[1] is not None else np.nan for r in rows_corr])
+    h10_filtrado = _filtrar_mediana(h10_array, ventana=7)
+
     eventos = []
     ultimo_evento = None
 
-    for i in range(1, len(rows)):
-        t_prev, h10_prev, h20_prev, h30_prev = rows[i - 1]
-        t_curr, h10_curr, h20_curr, h30_curr = rows[i]
+    for i in range(1, len(rows_corr)):
+        t_curr = rows_corr[i][0]
+        h10_prev = h10_filtrado[i - 1]
+        h10_curr = h10_filtrado[i]
 
-        if h10_prev is None or h10_curr is None:
+        if np.isnan(h10_prev) or np.isnan(h10_curr):
             continue
 
         delta = h10_curr - h10_prev
@@ -100,9 +150,9 @@ def detectar_eventos_mojado(conn, nodo_id, dias=180, umbral_delta=3.0):
 
             eventos.append({
                 "tiempo": t_curr,
-                "h10_pre": round(h10_prev, 2),
-                "h10_post": round(h10_curr, 2),
-                "delta": round(delta, 2),
+                "h10_pre": round(float(h10_prev), 2),
+                "h10_post": round(float(h10_curr), 2),
+                "delta": round(float(delta), 2),
             })
             ultimo_evento = t_curr
 
@@ -113,8 +163,19 @@ def detectar_eventos_mojado(conn, nodo_id, dias=180, umbral_delta=3.0):
 # 2. CALCULAR FIRMA HÍDRICA
 # ============================================================
 def _modelo_secado(t, h_residual, amplitud, tau):
-    """h(t) = h_residual + amplitud * exp(-t / tau)"""
+    """Monoexponencial: h(t) = h_residual + amplitud * exp(-t / tau)"""
     return h_residual + amplitud * np.exp(-t / tau)
+
+
+def _modelo_secado_biexp(t, h_residual, a1, tau1, a2, tau2):
+    """
+    Biexponencial para andisoles con doble porosidad:
+    h(t) = h_residual + a1*exp(-t/tau1) + a2*exp(-t/tau2)
+
+    tau1 = drenaje gravitacional rápido (típico 2-6h)
+    tau2 = retención capilar lenta en alofana (típico 20-60h)
+    """
+    return h_residual + a1 * np.exp(-t / tau1) + a2 * np.exp(-t / tau2)
 
 
 def calcular_firma(conn, nodo_id, evento_timestamp):
@@ -196,6 +257,11 @@ def calcular_firma(conn, nodo_id, evento_timestamp):
 
     # ---- CURVA DE SECADO (tau) ----
     def calcular_tau(h_series, tiempos_list, idx_evento):
+        """
+        Calcula constante de secado. Intenta monoexponencial primero.
+        Si hay suficientes datos, prueba biexponencial y compara R².
+        Retorna dict: {"tau": float, "tau_rapido": float|None, "tau_lento": float|None, "modelo": str}
+        """
         if curve_fit is None:
             return None
 
@@ -229,6 +295,9 @@ def calcular_firma(conn, nodo_id, evento_timestamp):
         if amplitud_est < 1.0:
             return None  # no hay secado significativo
 
+        # Modelo 1: Monoexponencial
+        tau_mono = None
+        r2_mono = -1
         try:
             popt, _ = curve_fit(
                 _modelo_secado, t_clean, h_clean,
@@ -236,16 +305,65 @@ def calcular_firma(conn, nodo_id, evento_timestamp):
                 bounds=([0, 0, 0.5], [60, 50, 200]),
                 maxfev=5000,
             )
-            tau = round(popt[2], 2)
-            if tau < 0.5 or tau > 200:
-                return None
-            return tau
+            tau_mono = round(popt[2], 2)
+            if tau_mono < 0.5 or tau_mono > 200:
+                tau_mono = None
+            else:
+                pred = _modelo_secado(t_clean, *popt)
+                ss_res = np.sum((h_clean - pred) ** 2)
+                ss_tot = np.sum((h_clean - np.mean(h_clean)) ** 2)
+                r2_mono = 1 - ss_res / ss_tot if ss_tot > 0 else 0
         except Exception:
-            return None
+            pass
 
-    tau_10 = calcular_tau(h10, tiempos, idx_evento)
-    tau_20 = calcular_tau(h20, tiempos, idx_evento)
-    tau_30 = calcular_tau(h30, tiempos, idx_evento)
+        # Modelo 2: Biexponencial (solo si hay suficientes datos)
+        tau_rapido = None
+        tau_lento = None
+        r2_biexp = -1
+        if len(h_clean) >= 30:
+            try:
+                popt2, _ = curve_fit(
+                    _modelo_secado_biexp, t_clean, h_clean,
+                    p0=[h_residual_est, amplitud_est * 0.6, 4.0, amplitud_est * 0.4, 20.0],
+                    bounds=([0, 0, 0.5, 0, 2], [60, 50, 30, 50, 200]),
+                    maxfev=10000,
+                )
+                t1, t2 = popt2[2], popt2[4]
+                tau_rapido = round(min(t1, t2), 2)
+                tau_lento = round(max(t1, t2), 2)
+                pred2 = _modelo_secado_biexp(t_clean, *popt2)
+                ss_res2 = np.sum((h_clean - pred2) ** 2)
+                ss_tot2 = np.sum((h_clean - np.mean(h_clean)) ** 2)
+                r2_biexp = 1 - ss_res2 / ss_tot2 if ss_tot2 > 0 else 0
+            except Exception:
+                pass
+
+        # Elegir mejor modelo (biexp gana si R² mejora >0.05)
+        if r2_biexp > r2_mono + 0.05 and tau_rapido is not None:
+            return {
+                "tau": tau_lento,  # tau dominante para compatibilidad
+                "tau_rapido": tau_rapido,
+                "tau_lento": tau_lento,
+                "modelo": "biexponencial",
+                "r2": round(r2_biexp, 4),
+            }
+        elif tau_mono is not None:
+            return {
+                "tau": tau_mono,
+                "tau_rapido": None,
+                "tau_lento": None,
+                "modelo": "monoexponencial",
+                "r2": round(r2_mono, 4),
+            }
+        return None
+
+    tau_10_result = calcular_tau(h10, tiempos, idx_evento)
+    tau_20_result = calcular_tau(h20, tiempos, idx_evento)
+    tau_30_result = calcular_tau(h30, tiempos, idx_evento)
+
+    tau_10 = tau_10_result["tau"] if tau_10_result else None
+    tau_20 = tau_20_result["tau"] if tau_20_result else None
+    tau_30 = tau_30_result["tau"] if tau_30_result else None
 
     # ---- BREAKING POINT ----
     breaking_point_10 = None

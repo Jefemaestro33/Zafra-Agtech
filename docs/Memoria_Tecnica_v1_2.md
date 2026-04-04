@@ -2,7 +2,7 @@
 
 ## Plataforma de Agricultura Inteligente para Mexico
 
-**Version 1.2** — 30 de marzo de 2026
+**Version 2.0** — 3 de abril de 2026
 Guadalajara, Jalisco
 
 ---
@@ -19,8 +19,23 @@ El sistema resuelve un problema concreto: los productores de aguacate pierden en
 - Modelo de riesgo compartido: 30% del incremento de produccion, $0 upfront
 - Agronomo en campo (Salvador) que traduce datos en acciones — no vendemos cajas
 - Stack de IA completo: sensores → firma hidrica → CUSUM → ML → LLM con diagnosticos
+- Balance hidrico prescriptivo: recetas de riego con litros/arbol y timing exacto
+- Pipeline WhatsApp listo para produccion
 
-**Estado actual:** Sistema completo funcionando en produccion con datos sinteticos (416K registros) + 11 alertas realistas. Deploy publico en Railway. Landing page publica, dashboard dark premium con autenticacion JWT (4 usuarios, 3 roles), sidebar colapsable, 14 vistas funcionales + 5 placeholders, consultor interactivo con Claude, sistema de alertas con desglose visual y diagnosticos IA, exportacion CSV, CRUD de predios, y PWA instalable. Pendiente: hardware en campo y datos reales (estimado junio 2026 con financiamiento UP).
+**Estado actual (v2.0 — 3 abril 2026):** Sistema completo funcionando en produccion con datos sinteticos (416K registros) + 11 alertas realistas. Deploy publico en Railway. Landing page publica, dashboard dark premium con autenticacion JWT (4 usuarios, 3 roles), sidebar colapsable, 14 vistas funcionales + 5 placeholders, consultor interactivo con Claude, sistema de alertas con desglose visual y diagnosticos IA, exportacion CSV, CRUD de predios, y PWA instalable.
+
+**Novedades v2.0:**
+- Score Phytophthora v3 (10 factores con interacciones multiplicativas)
+- Modulo de balance hidrico prescriptivo (recetas de riego: litros, hora, frecuencia)
+- Modulo de calibracion gravimetrica (correccion por temperatura, umbrales por predio)
+- Pipeline WhatsApp completo (Meta Cloud API, cronjobs diarios/horarios/semanales)
+- Firma hidrica v2 (filtro mediana anti-ruido, correccion temp, modelo biexponencial)
+- CUSUM v2 (tracking de EC, nombres legibles, tamano del efecto)
+- LLM v2 (contexto acumulativo, historial tratamientos, integracion balance hidrico)
+- SQL: tablas riegos, analisis_foliar, balance_historico
+- API: 8 endpoints nuevos (balance, riegos, analisis foliar)
+
+Pendiente: hardware en campo y datos reales (estimado junio 2026 con financiamiento UP).
 
 ### Modelo de negocio
 
@@ -34,17 +49,20 @@ El sistema resuelve un problema concreto: los productores de aguacate pierden en
 
 ## 2. ESTADO ACTUAL — Lo que esta construido y funcionando (30 marzo 2026)
 
-### 2.1 Backend Python (8 modulos, ~4,220 lineas)
+### 2.1 Backend Python (13 modulos, ~6,500+ lineas)
 
 | Modulo | Lineas | Funcion | Estado |
 |--------|--------|---------|--------|
-| `api.py` | ~950 | FastAPI con 36 endpoints REST (CRUD predios, export CSV, auth, config alertas), CORS configurable, rate limiting en login, sirve dashboard estatico | Produccion |
-| `alertas.py` | ~690 | Score Phytophthora v2 (7 factores), alerta riego/offline/bateria, `generar_resumen_nodo()` | Produccion |
+| `api.py` | ~1,200 | FastAPI con 44+ endpoints REST (CRUD predios, balance hidrico, riegos, foliar, export CSV, auth, config alertas), CORS configurable, rate limiting, sirve dashboard estatico | Produccion |
+| `alertas.py` | ~750 | Score Phytophthora **v3** (10 factores + interaccion multiplicativa), alerta riego/offline/bateria, `generar_resumen_nodo()` con contexto acumulativo (tratamientos, balance, diagnosticos previos) | Produccion |
+| `balance_hidrico.py` | ~280 | **NUEVO v2.** Balance hidrico prescriptivo: ETo × Kc → deficit → receta de riego (mm, litros/arbol, hora). Mensajes WhatsApp formateados | Produccion |
+| `calibracion.py` | ~100 | **NUEVO v2.** Configuracion de calibracion gravimetrica por predio, correccion por temperatura, umbrales calibrados | Produccion |
+| `whatsapp.py` | ~220 | **NUEVO v2.** Pipeline Meta Cloud API: cronjobs diarios (receta 6AM), horarios (alertas criticas), semanales (reporte productor) | Listo (pendiente env vars) |
 | `clima.py` | ~310 | Open-Meteo API → ETo Penman-Monteith, backfill historico, modo daemon | Produccion |
-| `llm_consultor.py` | ~470 | Claude Sonnet API con httpx, 6 prompts especializados, diagnosticos + reportes, parsing con fallback | Produccion |
-| `firma_hidrica.py` | ~320 | Deteccion de eventos de mojado, curve_fit τ, velocidad infiltracion, breaking point, transacciones seguras | Produccion |
-| `comparativo.py` | ~280 | CUSUM tratamiento vs testigo, medias diarias, analisis por bloque | Produccion |
-| `modelo_microbioma.py` | ~350 | Random Forest (14 features → 5 targets), 5-Fold CV, prediccion on-demand | Produccion |
+| `llm_consultor.py` | ~530 | Claude Sonnet API con httpx, 6 prompts especializados, diagnosticos + reportes, **v2: contexto acumulativo + historial tratamientos + balance hidrico** | Produccion |
+| `firma_hidrica.py` | ~500 | Deteccion de eventos de mojado, curve_fit τ, velocidad infiltracion, breaking point. **v2: filtro mediana anti-ruido, correccion temperatura, modelo biexponencial para andisoles** | Produccion |
+| `comparativo.py` | ~420 | CUSUM tratamiento vs testigo, medias diarias, analisis por bloque. **v2: tracking EC, nombres legibles, efecto tamano** | Produccion |
+| `modelo_microbioma.py` | ~410 | Random Forest (14 features → 5 targets), 5-Fold CV, prediccion on-demand. **v2: disclaimer datos sinteticos, plan reentrenamiento** | Produccion |
 | `auth.py` | ~170 | Autenticacion JWT (2h expiracion), usuarios desde env vars, bcrypt, rate limiting | Produccion |
 | `db.py` | ~45 | Modulo compartido de conexion a PostgreSQL (get_conn, query, execute) | Produccion |
 | `config_alertas.py` | ~70 | Configuracion personalizable de umbrales de alerta (JSON) | Produccion |

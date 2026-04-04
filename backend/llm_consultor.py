@@ -139,6 +139,31 @@ def convertir_resumen_a_texto(resumen):
         for m in micro:
             lines.append(f"  {m['target']}: {m['valor']} {m['unidad']} ({m['fecha']})")
 
+    # Tratamientos recientes (NUEVO v2)
+    tratamientos = resumen.get("tratamientos_recientes", [])
+    if tratamientos:
+        lines.append(f"\nTRATAMIENTOS RECIENTES:")
+        for t in tratamientos:
+            lines.append(f"  {t['fecha']}: {t['tipo']} - {t.get('producto', '?')} "
+                         f"({t.get('cantidad', '?')} {t.get('unidad', '')})")
+
+    # Balance hídrico (NUEVO v2)
+    balance = resumen.get("balance_hidrico")
+    if balance:
+        lines.append(f"\nBALANCE HÍDRICO:")
+        lines.append(f"  Receta actual: {balance.get('receta', '?')}")
+        lines.append(f"  Agua disponible: {balance.get('fraccion_disponible', 0)*100:.0f}%")
+        lines.append(f"  ETo diario: {balance.get('etc_diario_mm', '?')} mm")
+        if balance.get("proxima_revision_dias"):
+            lines.append(f"  Próximo riego estimado: en {balance['proxima_revision_dias']} días")
+
+    # Historial de diagnósticos previos (NUEVO v2)
+    historico = resumen.get("diagnosticos_previos", [])
+    if historico:
+        lines.append(f"\nDIAGNÓSTICOS PREVIOS (últimos 3):")
+        for h in historico:
+            lines.append(f"  [{h['fecha']}]: {h['diagnostico'][:150]}")
+
     return "\n".join(lines)
 
 
