@@ -300,14 +300,12 @@ export default function PredioView({ predioId, onChangePredio, predios, user }) 
           style={{ background: 'var(--color-surface-2)', border: '1px solid var(--color-border)' }}
         >
           {[
-            { name: 'Salvador Jayat', role: 'Agrónomo de campo', status: 'activo' },
+            { name: 'Salvador', role: 'Agrónomo de campo', status: 'activo' },
           ].map((agro, i) => (
             <div
               key={i}
-              className="flex items-center justify-between px-5 py-3.5 transition-colors"
+              className="flex items-center justify-between px-5 py-3.5 transition-colors hover-surface"
               style={{ borderBottom: '1px solid var(--color-border)' }}
-              onMouseEnter={e => e.currentTarget.style.background = 'var(--color-surface-3)'}
-              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
             >
               <div className="flex items-center gap-3">
                 <div

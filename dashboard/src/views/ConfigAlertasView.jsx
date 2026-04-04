@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { getToken } from '../hooks/useAuth'
+import { useToast } from '../components/Toast'
 import {
   Shield, Droplets, Wifi, Battery, RotateCcw, Save, Loader2,
   Thermometer, Clock, CloudRain, CloudSun, Wind, AlertTriangle,
@@ -313,13 +314,9 @@ export default function ConfigAlertasView() {
   const [draft, setDraft] = useState(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState({})
-  const [toast, setToast] = useState(null)
   const [confirmReset, setConfirmReset] = useState(false)
-
-  const showToast = (type, message) => {
-    setToast({ type, message })
-    setTimeout(() => setToast(null), 3500)
-  }
+  const toast = useToast()
+  const showToast = (type, message) => toast[type]?.(message) || toast.info(message)
 
   // Fetch config
   useEffect(() => {

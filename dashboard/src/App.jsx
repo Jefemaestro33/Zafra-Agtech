@@ -4,6 +4,7 @@ import { Routes, Route, NavLink, useNavigate, useLocation } from 'react-router-d
 import { useApi } from './hooks/useApi'
 import { useAuth } from './hooks/useAuth'
 import ErrorBoundary from './components/ErrorBoundary'
+import ProfileMenu from './components/ProfileMenu'
 import {
   LayoutDashboard, Radio, Droplets, GitCompareArrows, CloudSun, BrainCircuit,
   Bell, Leaf, Menu, X, ChevronsLeft, ChevronsRight, Info, Star, Trash2,
@@ -68,6 +69,14 @@ export default function App() {
     return saved ? parseInt(saved, 10) : 1
   })
 
+  // Validate predioId against actual predios
+  useEffect(() => {
+    if (predios && predios.length > 0) {
+      const exists = predios.some(p => p.predio_id === predioId)
+      if (!exists) setPredioId(predios[0].predio_id)
+    }
+  }, [predios, predioId])
+
   useEffect(() => {
     localStorage.setItem('agtech_predio_id', String(predioId))
   }, [predioId])
@@ -85,6 +94,8 @@ export default function App() {
 
   useEffect(() => { setMobileOpen(false); setProfileMenuOpen(false) }, [location.pathname])
   useEffect(() => { if (location.pathname.startsWith('/alertas')) setAlertasOpen(true) }, [location.pathname])
+
+  const handleLogout = () => { logout(); navigate('/') }
 
   // Auth loading screen
   if (authLoading) {
@@ -130,10 +141,9 @@ export default function App() {
             <h1 className="text-sm font-bold tracking-tight" style={{ color: 'var(--color-text-primary)' }}>AgTech</h1>
           </div>
           <div className="flex items-center gap-2">
-            <button onClick={() => navigate('/alertas')} className="relative p-2 rounded-lg transition-colors"
-              style={{ color: hasAlerts ? 'var(--color-accent-amber)' : 'var(--color-text-muted)' }}
-              onMouseEnter={e => e.currentTarget.style.background = 'var(--color-surface-3)'}
-              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+            <button onClick={() => navigate('/alertas')}
+              className="relative p-2 rounded-lg transition-colors hover-surface"
+              style={{ color: hasAlerts ? 'var(--color-accent-amber)' : 'var(--color-text-muted)' }}>
               <Bell size={18} />
               {hasAlerts && (
                 <span className="absolute -top-0.5 -right-0.5 text-[10px] font-bold rounded-full w-[18px] h-[18px] flex items-center justify-center"
@@ -159,10 +169,9 @@ export default function App() {
         >
           {/* Toggle */}
           <div className="px-2 pt-3 pb-2 flex justify-center shrink-0">
-            <button onClick={() => setCollapsed(!collapsed)} className="p-2 rounded-lg transition-colors w-full flex items-center justify-center"
-              style={{ color: 'var(--color-text-muted)' }}
-              onMouseEnter={e => e.currentTarget.style.background = 'var(--color-surface-3)'}
-              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+            <button onClick={() => setCollapsed(!collapsed)}
+              className="p-2 rounded-lg transition-colors w-full flex items-center justify-center hover-surface"
+              style={{ color: 'var(--color-text-muted)' }}>
               {collapsed ? <ChevronsRight size={18} /> : <ChevronsLeft size={18} />}
             </button>
           </div>
@@ -185,14 +194,12 @@ export default function App() {
                     const subOpen = hasSub && alertasOpen
                     return (
                       <div key={t.path}>
-                        <div className="flex items-center rounded-xl text-sm font-medium transition-all duration-200 cursor-pointer"
+                        <div className={`nav-item flex items-center rounded-xl text-sm font-medium cursor-pointer ${active ? 'nav-active' : ''}`}
                           style={{
                             background: active ? 'var(--color-accent-green-dim)' : 'transparent',
                             color: active ? 'var(--color-accent-green)' : 'var(--color-text-muted)',
                             border: active ? '1px solid rgba(16,185,129,0.2)' : '1px solid transparent',
-                          }}
-                          onMouseEnter={e => { if (!active) { e.currentTarget.style.background = 'var(--color-surface-3)'; e.currentTarget.style.color = 'var(--color-text-secondary)' } }}
-                          onMouseLeave={e => { if (!active) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--color-text-muted)' } }}>
+                          }}>
                           <NavLink to={t.path} end={t.path === '/' || t.path === '/alertas'}
                             onClick={() => { setMobileOpen(false); if (hasSub) setAlertasOpen(!alertasOpen) }}
                             className="flex items-center gap-3 px-3 py-2.5 flex-1">
@@ -210,10 +217,8 @@ export default function App() {
                               const sa = isSubActive(sub); const SI = sub.icon
                               return (
                                 <NavLink key={sub.path} to={sub.path} end onClick={() => setMobileOpen(false)}
-                                  className="flex items-center gap-2.5 pl-4 pr-3 py-2 rounded-r-lg text-xs font-medium transition-all duration-200"
-                                  style={{ background: sa ? 'var(--color-accent-green-dim)' : 'transparent', color: sa ? 'var(--color-accent-green)' : 'var(--color-text-muted)' }}
-                                  onMouseEnter={e => { if (!sa) { e.currentTarget.style.background = 'var(--color-surface-3)'; e.currentTarget.style.color = 'var(--color-text-secondary)' } }}
-                                  onMouseLeave={e => { if (!sa) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--color-text-muted)' } }}>
+                                  className={`nav-item flex items-center gap-2.5 pl-4 pr-3 py-2 rounded-r-lg text-xs font-medium ${sa ? 'nav-active' : ''}`}
+                                  style={{ background: sa ? 'var(--color-accent-green-dim)' : 'transparent', color: sa ? 'var(--color-accent-green)' : 'var(--color-text-muted)' }}>
                                   <SI size={14} /><span>{sub.label}</span>
                                 </NavLink>
                               )
@@ -229,79 +234,15 @@ export default function App() {
               {/* Profile — bottom */}
               <div className="mt-auto px-3 pb-4 relative">
                 <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: 12 }}>
-                  {/* Profile menu popup */}
                   {profileMenuOpen && (
-                    <>
-                      <div className="fixed inset-0 z-30" onClick={() => setProfileMenuOpen(false)} />
-                      <div
-                        className="absolute bottom-full left-3 right-3 mb-2 rounded-2xl py-2 z-40 animate-in shadow-2xl"
-                        style={{ background: 'var(--color-surface-3)', border: '1px solid var(--color-border-light)' }}
-                      >
-                        <div className="px-4 py-2 mb-1" style={{ borderBottom: '1px solid var(--color-border)' }}>
-                          <p className="text-xs font-bold" style={{ color: 'var(--color-text-primary)' }}>Ernest</p>
-                          <p className="text-[10px]" style={{ color: 'var(--color-text-muted)' }}>Administrador · AgTech</p>
-                        </div>
-
-                        <p className="px-4 pt-2 pb-1 text-[9px] font-semibold uppercase tracking-widest" style={{ color: 'var(--color-text-muted)' }}>Configuración</p>
-                        {[
-                          { icon: Settings, label: 'Configuración de alertas', desc: 'Umbrales Phytophthora, riego, batería', path: '/config/alertas' },
-                          { icon: BellRing, label: 'Notificaciones', desc: 'Email, WhatsApp, canales', path: '/config/notificaciones' },
-                          { icon: Plug, label: 'Integraciones', desc: 'API Keys, webhooks, Telegram', path: '/config/integraciones' },
-                          { icon: DatabaseBackup, label: 'Respaldos', desc: 'Backup y restore de datos', path: '/config/respaldos' },
-                        ].map((item, i) => (
-                          <button
-                            key={i}
-                            onClick={() => { setProfileMenuOpen(false); navigate(item.path) }}
-                            className="w-full flex items-center gap-3 px-4 py-2 text-left transition-colors"
-                            onMouseEnter={e => e.currentTarget.style.background = 'var(--color-surface-4)'}
-                            onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                          >
-                            <item.icon size={15} style={{ color: 'var(--color-text-muted)' }} />
-                            <div>
-                              <p className="text-xs font-medium" style={{ color: 'var(--color-text-primary)' }}>{item.label}</p>
-                              <p className="text-[10px]" style={{ color: 'var(--color-text-muted)' }}>{item.desc}</p>
-                            </div>
-                          </button>
-                        ))}
-
-                        <div className="my-1 mx-3" style={{ borderTop: '1px solid var(--color-border)' }} />
-
-                        <div className="my-1 mx-3" style={{ borderTop: '1px solid var(--color-border)' }} />
-                        <button
-                          onClick={() => { setProfileMenuOpen(false); navigate('/docs') }}
-                          className="w-full flex items-center gap-3 px-4 py-2 text-left transition-colors"
-                          onMouseEnter={e => e.currentTarget.style.background = 'var(--color-surface-4)'}
-                          onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                        >
-                          <BookOpen size={15} style={{ color: 'var(--color-text-muted)' }} />
-                          <div>
-                            <p className="text-xs font-medium" style={{ color: 'var(--color-text-primary)' }}>Documentación</p>
-                            <p className="text-[10px]" style={{ color: 'var(--color-text-muted)' }}>Guías y ayuda</p>
-                          </div>
-                        </button>
-
-                        <div className="my-1 mx-3" style={{ borderTop: '1px solid var(--color-border)' }} />
-
-                        <button
-                          onClick={() => { setProfileMenuOpen(false); logout(); navigate('/') }}
-                          className="w-full flex items-center gap-3 px-4 py-2 text-left transition-colors"
-                          onMouseEnter={e => { e.currentTarget.style.background = 'var(--color-glow-red)' }}
-                          onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
-                        >
-                          <LogOut size={15} style={{ color: 'var(--color-accent-red)' }} />
-                          <p className="text-xs font-medium" style={{ color: 'var(--color-accent-red)' }}>Cerrar sesión</p>
-                        </button>
-                      </div>
-                    </>
+                    <div className="absolute bottom-full left-3 right-3 mb-2 z-40">
+                      <ProfileMenu user={user} onClose={() => setProfileMenuOpen(false)} onLogout={handleLogout} />
+                    </div>
                   )}
-
-                  {/* Profile button */}
                   <button
                     onClick={() => setProfileMenuOpen(!profileMenuOpen)}
-                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors"
+                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors hover-surface"
                     style={{ background: profileMenuOpen ? 'var(--color-surface-3)' : 'var(--color-surface-2)', border: '1px solid var(--color-border)' }}
-                    onMouseEnter={e => e.currentTarget.style.background = 'var(--color-surface-3)'}
-                    onMouseLeave={e => { if (!profileMenuOpen) e.currentTarget.style.background = 'var(--color-surface-2)' }}
                   >
                     <div
                       className="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold shrink-0"
@@ -329,14 +270,12 @@ export default function App() {
                   const active = isTabActive(t); const Icon = t.icon
                   return (
                     <NavLink key={t.path} to={t.path} end={t.path === '/' || t.path === '/alertas'}
-                      className="flex items-center justify-center w-10 h-10 mx-auto rounded-xl transition-all duration-200"
+                      className={`nav-item flex items-center justify-center w-10 h-10 mx-auto rounded-xl ${active ? 'nav-active' : ''}`}
                       style={{
                         background: active ? 'var(--color-accent-green-dim)' : 'transparent',
                         color: active ? 'var(--color-accent-green)' : 'var(--color-text-muted)',
                         border: active ? '1px solid rgba(16,185,129,0.2)' : '1px solid transparent',
                       }}
-                      onMouseEnter={e => { if (!active) { e.currentTarget.style.background = 'var(--color-surface-3)'; e.currentTarget.style.color = 'var(--color-text-secondary)' } }}
-                      onMouseLeave={e => { if (!active) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--color-text-muted)' } }}
                       title={t.label}>
                       <Icon size={20} />
                     </NavLink>
@@ -345,48 +284,7 @@ export default function App() {
               </nav>
               <div className="mt-auto pb-4 flex justify-center">
                 {profileMenuOpen && createPortal(
-                  <>
-                    <div className="fixed inset-0" style={{ zIndex: 60 }} onClick={() => setProfileMenuOpen(false)} />
-                    <div
-                      className="fixed rounded-2xl py-2 animate-in shadow-2xl"
-                      style={{ zIndex: 70, background: 'var(--color-surface-3)', border: '1px solid var(--color-border-light)', width: 220, bottom: 60, left: 8 }}
-                    >
-                      <div className="px-4 py-2 mb-1" style={{ borderBottom: '1px solid var(--color-border)' }}>
-                        <p className="text-xs font-bold" style={{ color: 'var(--color-text-primary)' }}>{user.nombre}</p>
-                        <p className="text-[10px]" style={{ color: 'var(--color-text-muted)' }}>{user.rol === 'admin' ? 'Administrador' : 'Agrónomo'} · AgTech</p>
-                      </div>
-                      {[
-                        { icon: Settings, label: 'Config. alertas', path: '/config/alertas' },
-                        { icon: BellRing, label: 'Notificaciones', path: '/config/notificaciones' },
-                        { icon: Plug, label: 'Integraciones', path: '/config/integraciones' },
-                        { icon: DatabaseBackup, label: 'Respaldos', path: '/config/respaldos' },
-                      ].map((item, i) => (
-                        <button key={i} onClick={() => { setProfileMenuOpen(false); navigate(item.path) }}
-                          className="w-full flex items-center gap-3 px-4 py-2 text-left transition-colors"
-                          onMouseEnter={e => e.currentTarget.style.background = 'var(--color-surface-4)'}
-                          onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-                          <item.icon size={14} style={{ color: 'var(--color-text-muted)' }} />
-                          <span className="text-xs" style={{ color: 'var(--color-text-primary)' }}>{item.label}</span>
-                        </button>
-                      ))}
-                      <div className="my-1 mx-3" style={{ borderTop: '1px solid var(--color-border)' }} />
-                      <button onClick={() => { setProfileMenuOpen(false); navigate('/docs') }}
-                        className="w-full flex items-center gap-3 px-4 py-2 text-left transition-colors"
-                        onMouseEnter={e => e.currentTarget.style.background = 'var(--color-surface-4)'}
-                        onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-                        <BookOpen size={14} style={{ color: 'var(--color-text-muted)' }} />
-                        <span className="text-xs" style={{ color: 'var(--color-text-primary)' }}>Documentación</span>
-                      </button>
-                      <div className="my-1 mx-3" style={{ borderTop: '1px solid var(--color-border)' }} />
-                      <button onClick={() => { setProfileMenuOpen(false); logout(); navigate('/') }}
-                        className="w-full flex items-center gap-3 px-4 py-2 text-left transition-colors"
-                        onMouseEnter={e => e.currentTarget.style.background = 'var(--color-glow-red)'}
-                        onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-                        <LogOut size={14} style={{ color: 'var(--color-accent-red)' }} />
-                        <span className="text-xs" style={{ color: 'var(--color-accent-red)' }}>Cerrar sesión</span>
-                      </button>
-                    </div>
-                  </>,
+                  <ProfileMenu user={user} compact onClose={() => setProfileMenuOpen(false)} onLogout={handleLogout} />,
                   document.body
                 )}
                 <button

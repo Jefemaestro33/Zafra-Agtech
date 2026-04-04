@@ -220,7 +220,7 @@ export default function LoginView({ onLogin }) {
           className="text-center text-[10px] mt-6"
           style={{ color: 'var(--color-text-muted)' }}
         >
-          AgTech Sistema · v1.1
+          AgTech Sistema · v2.0
         </p>
       </div>
 

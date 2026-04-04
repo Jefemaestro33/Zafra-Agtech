@@ -130,9 +130,9 @@ export default function OverviewView({ predioId }) {
             ))}
           </div>
         </div>
-        <div style={{ height: 420 }}>
+        <div className="h-[320px] sm:h-[380px] md:h-[420px] lg:h-[480px]">
           <MapContainer center={center} zoom={17} style={{ height: '100%', width: '100%' }} scrollWheelZoom={true}>
-            <TileLayer key={tileMode} attribution={tile.attribution} url={tile.url} />
+            <TileLayer attribution={tile.attribution} url={tile.url} />
             {shapes.polygons.map(s => (
               <Polygon key={s.id} positions={s.points} pathOptions={{ fillColor: s.fill, color: s.color, weight: 2, fillOpacity: 0.3 }} />
             ))}
