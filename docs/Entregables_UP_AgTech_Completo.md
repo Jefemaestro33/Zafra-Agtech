@@ -1260,6 +1260,7 @@ Variable dependiente: Rendimiento (kg/arbol), salud radicular, indicadores de mi
 | Guia de Laboratorio | docs/Analisis_Laboratorio_Guia_Tecnica.md.pdf | Protocolo de muestreo qPCR |
 | Pitch Deck UP | docs/pitch/pitch_deck_UP.md | Deck para Comite de Inversion UP (12 slides) |
 | One Pager UP | docs/pitch/one_pager_UP.md | Resumen 1 pagina para Comite UP |
+| Propuesta Convenio CUCBA | docs/Propuesta_Convenio_AgTech_CUCBA_v1_0.md | Convenio marco 5 anos con CUCBA-UdeG |
 
 ---
 

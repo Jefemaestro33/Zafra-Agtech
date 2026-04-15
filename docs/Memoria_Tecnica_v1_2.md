@@ -579,6 +579,7 @@ Detalle completo en `docs/Presupuesto_Piloto_Nextipac.xlsx`.
 | Presupuesto del piloto | `docs/Presupuesto_Piloto_Nextipac.xlsx` |
 | Pitch Deck Comite UP | `docs/pitch/pitch_deck_UP.md` |
 | One Pager Comite UP | `docs/pitch/one_pager_UP.md` |
+| Propuesta Convenio CUCBA-UdeG | `docs/Propuesta_Convenio_AgTech_CUCBA_v1_0.md` |
 
 ---
 

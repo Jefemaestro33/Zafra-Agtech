@@ -84,6 +84,7 @@ Dashboard en http://localhost:5173
 - [Pitch Deck UP](docs/pitch/pitch_deck_UP.md) — deck Comité Universidad Panamericana (12 slides)
 - [One Pager](docs/pitch/one_pager.md) — resumen 1 pagina inversionista
 - [One Pager UP](docs/pitch/one_pager_UP.md) — resumen 1 pagina Comité UP
+- [Propuesta Convenio CUCBA-UdeG](docs/Propuesta_Convenio_AgTech_CUCBA_v1_0.md) — convenio marco 5 años: laboratorio, tesistas, co-aplicacion CONAHCYT
 
 ## Estado del proyecto
 
