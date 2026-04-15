@@ -577,7 +577,8 @@ Detalle completo en `docs/Presupuesto_Piloto_Nextipac.xlsx`.
 | Guia tecnica de laboratorio | `docs/Analisis_Laboratorio_Guia_Tecnica.md.pdf` |
 | Proyeccion financiera y mercado | `docs/Analisis_Mercado_Proyeccion_Financiera.md.pdf` |
 | Presupuesto del piloto | `docs/Presupuesto_Piloto_Nextipac.xlsx` |
-| Roadmap detallado | `docs/Roadmap_Lo_Que_Falta.md` |
+| Pitch Deck Comite UP | `docs/pitch/pitch_deck_UP.md` |
+| One Pager Comite UP | `docs/pitch/one_pager_UP.md` |
 
 ---
 

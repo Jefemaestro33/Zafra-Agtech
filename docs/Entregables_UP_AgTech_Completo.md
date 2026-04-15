@@ -1258,7 +1258,8 @@ Variable dependiente: Rendimiento (kg/arbol), salud radicular, indicadores de mi
 | Presupuesto Piloto | docs/Presupuesto_Piloto_Nextipac.xlsx | Costos desglosados |
 | Proyeccion Financiera | docs/Analisis_Mercado_Proyeccion_Financiera.md.pdf | TAM/SAM/SOM, proyecciones a 5 anos |
 | Guia de Laboratorio | docs/Analisis_Laboratorio_Guia_Tecnica.md.pdf | Protocolo de muestreo qPCR |
-| Roadmap | docs/Roadmap_Lo_Que_Falta.md | Plan de trabajo pendiente |
+| Pitch Deck UP | docs/pitch/pitch_deck_UP.md | Deck para Comite de Inversion UP (12 slides) |
+| One Pager UP | docs/pitch/one_pager_UP.md | Resumen 1 pagina para Comite UP |
 
 ---
 

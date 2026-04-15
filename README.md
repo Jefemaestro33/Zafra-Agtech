@@ -80,7 +80,10 @@ Dashboard en http://localhost:5173
 - [Plan v2 Zafra](docs/planv2_zafra.md) — mejoras tecnicas para maximizar rendimiento
 - [Arquitectura de Software](docs/Arquitectura_Software_3Pilares.md) — diseno detallado de los 3 pilares
 - [Presupuesto Piloto](docs/Presupuesto_Piloto_Nextipac.xlsx) — costos desglosados
-- [Roadmap](docs/Roadmap_Lo_Que_Falta.md) — plan de trabajo original
+- [Pitch Deck](docs/pitch/pitch_deck.md) — deck inversionista (11 slides)
+- [Pitch Deck UP](docs/pitch/pitch_deck_UP.md) — deck Comité Universidad Panamericana (12 slides)
+- [One Pager](docs/pitch/one_pager.md) — resumen 1 pagina inversionista
+- [One Pager UP](docs/pitch/one_pager_UP.md) — resumen 1 pagina Comité UP
 
 ## Estado del proyecto
 
