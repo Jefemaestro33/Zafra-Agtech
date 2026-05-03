@@ -1,4 +1,4 @@
-const CACHE_NAME = 'agtech-v2'
+const CACHE_NAME = 'zafra-v1'
 const STATIC_ASSETS = ['/', '/index.html']
 
 self.addEventListener('install', (event) => {

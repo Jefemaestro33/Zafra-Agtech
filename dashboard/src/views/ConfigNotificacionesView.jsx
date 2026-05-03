@@ -4,7 +4,7 @@ import {
   Wifi, Battery, Clock, Save, Loader2, Check, X, AlertTriangle,
 } from 'lucide-react'
 
-const STORAGE_KEY = 'agtech_notif_config'
+const STORAGE_KEY = 'zafra_notif_config'
 
 const defaultConfig = {
   canales: {

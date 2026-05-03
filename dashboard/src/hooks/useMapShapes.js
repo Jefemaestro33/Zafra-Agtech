@@ -1,4 +1,4 @@
-const STORAGE_KEY = 'agtech_map_shapes_'
+const STORAGE_KEY = 'zafra_map_shapes_'
 
 // shapes = { polygons: [...], lines: [...] }
 // polygon = { id, label, color, points: [[lat,lon], ...] }

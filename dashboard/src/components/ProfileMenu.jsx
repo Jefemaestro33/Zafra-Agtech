@@ -31,7 +31,7 @@ export default function ProfileMenu({ user, compact = false, onClose, onLogout }
         <div className="px-4 py-2 mb-1" style={{ borderBottom: '1px solid var(--color-border)' }}>
           <p className="text-xs font-bold" style={{ color: 'var(--color-text-primary)' }}>{user.nombre}</p>
           <p className="text-[10px]" style={{ color: 'var(--color-text-muted)' }}>
-            {user.rol === 'admin' ? 'Administrador' : 'Agrónomo'} · AgTech
+            {user.rol === 'admin' ? 'Administrador' : 'Agrónomo'} · Zafra
           </p>
         </div>
 

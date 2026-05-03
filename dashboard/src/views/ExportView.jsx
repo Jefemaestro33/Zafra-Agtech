@@ -40,7 +40,7 @@ export default function ExportView({ predioId }) {
       const blob = await res.blob()
       const a = document.createElement('a')
       a.href = URL.createObjectURL(blob)
-      a.download = res.headers.get('content-disposition')?.split('filename=')[1] || `agtech_${id}.csv`
+      a.download = res.headers.get('content-disposition')?.split('filename=')[1] || `zafra_${id}.csv`
       a.click()
       URL.revokeObjectURL(a.href)
       setDone(id)

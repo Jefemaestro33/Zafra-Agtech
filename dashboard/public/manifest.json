@@ -1,6 +1,6 @@
 {
-  "name": "AgTech Sistema",
-  "short_name": "AgTech",
+  "name": "Zafra",
+  "short_name": "Zafra",
   "description": "Plataforma de agricultura inteligente - Monitoreo IoT + IA",
   "start_url": "/",
   "display": "standalone",

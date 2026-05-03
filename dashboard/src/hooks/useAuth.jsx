@@ -2,7 +2,7 @@ import { createContext, useContext, useState, useEffect } from 'react'
 
 const AuthContext = createContext(null)
 
-const STORAGE_KEY = 'agtech_auth'
+const STORAGE_KEY = 'zafra_auth'
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)

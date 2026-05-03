@@ -15,7 +15,7 @@ const secciones = [
   { key: 'clima', label: 'Clima', icon: CloudSun, prompt: 'Interpreta los datos climáticos del predio: temperatura ambiente, precipitación acumulada, humedad relativa y evapotranspiración (ETo) calculada con Penman-Monteith.' },
 ]
 
-const STORAGE_KEY = 'agtech_consultas_'
+const STORAGE_KEY = 'zafra_consultas_'
 
 function loadConsultas(predioId) {
   try {

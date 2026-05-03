@@ -70,7 +70,7 @@ export default function LoginView({ onLogin }) {
             className="text-xl font-bold tracking-tight"
             style={{ color: 'var(--color-text-primary)' }}
           >
-            AgTech
+            Zafra
           </h1>
           <p
             className="text-xs mt-1"
@@ -220,7 +220,7 @@ export default function LoginView({ onLogin }) {
           className="text-center text-[10px] mt-6"
           style={{ color: 'var(--color-text-muted)' }}
         >
-          AgTech Sistema · v2.0
+          Zafra · v2.0
         </p>
       </div>
 

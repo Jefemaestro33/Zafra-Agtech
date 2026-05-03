@@ -84,7 +84,7 @@ function NotesSection({ predioId, userIniciales = '??' }) {
 
   // Load notes from localStorage (keyed by predioId)
   useEffect(() => {
-    const stored = localStorage.getItem(`agtech_notes_${predioId}`)
+    const stored = localStorage.getItem(`zafra_notes_${predioId}`)
     if (stored) {
       try { setNotes(JSON.parse(stored)) } catch { setNotes([]) }
     } else {
@@ -94,7 +94,7 @@ function NotesSection({ predioId, userIniciales = '??' }) {
 
   const saveNotes = (updated) => {
     setNotes(updated)
-    localStorage.setItem(`agtech_notes_${predioId}`, JSON.stringify(updated))
+    localStorage.setItem(`zafra_notes_${predioId}`, JSON.stringify(updated))
   }
 
   const handleAdd = () => {

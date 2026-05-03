@@ -6,6 +6,9 @@ import { ToastProvider, useToast } from './components/Toast'
 import { setApiErrorHandler } from './hooks/useApi'
 import App from './App'
 import './index.css'
+import { migrateAgtechToZafra } from './utils/migrateLocalStorage'
+
+migrateAgtechToZafra()
 
 // Bridge: connect useApi errors to toast system
 function ApiToastBridge({ children }) {

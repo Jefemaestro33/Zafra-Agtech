@@ -65,7 +65,7 @@ export default function App() {
   const { user, loading: authLoading, login, logout } = useAuth()
   const { data: predios } = useApi(user ? '/api/predios' : null)
   const [predioId, setPredioId] = useState(() => {
-    const saved = localStorage.getItem('agtech_predio_id')
+    const saved = localStorage.getItem('zafra_predio_id')
     return saved ? parseInt(saved, 10) : 1
   })
 
@@ -78,7 +78,7 @@ export default function App() {
   }, [predios, predioId])
 
   useEffect(() => {
-    localStorage.setItem('agtech_predio_id', String(predioId))
+    localStorage.setItem('zafra_predio_id', String(predioId))
   }, [predioId])
   const { data: alertas } = useApi(user ? `/api/predios/${predioId}/alertas` : null)
   const navigate = useNavigate()
@@ -138,7 +138,7 @@ export default function App() {
             <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: 'var(--color-glow-green)', border: '1px solid var(--color-accent-green-dim)' }}>
               <Leaf size={16} style={{ color: 'var(--color-accent-green)' }} />
             </div>
-            <h1 className="text-sm font-bold tracking-tight" style={{ color: 'var(--color-text-primary)' }}>AgTech</h1>
+            <h1 className="text-sm font-bold tracking-tight" style={{ color: 'var(--color-text-primary)' }}>Zafra</h1>
           </div>
           <div className="flex items-center gap-2">
             <button onClick={() => navigate('/alertas')}

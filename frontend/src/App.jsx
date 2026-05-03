@@ -33,7 +33,7 @@ export default function App() {
         <div className="max-w-7xl mx-auto px-4 h-12 flex items-center justify-between">
           <h1 className="text-lg font-bold text-white flex items-center gap-2">
             <span className="text-xl">🥑</span>
-            AgTech Nextipac
+            Zafra
           </h1>
           <div className="flex items-center gap-3">
             <button
