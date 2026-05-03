@@ -24,7 +24,7 @@ export function useApi(path, deps = []) {
     // Only show loading spinner on first load
     if (isFirstLoad.current) setLoading(true)
     fetch(path, { headers: authHeaders() })
-      .then(r => { if (!r.ok) throw new Error(r.status); return r.json() })
+      .then(async r => { if (!r.ok) { const j = await r.json().catch(() => ({})); throw new Error(j.detail || `HTTP ${r.status}`) } return r.json() })
       .then(d => { setData(d); setError(null); isFirstLoad.current = false; errorShownRef.current = false })
       .catch(e => {
         const msg = e?.message || String(e) || "Error desconocido"
@@ -69,6 +69,9 @@ export async function apiFetch(path, options = {}) {
     ...options,
     headers: { ...authHeaders(), ...options.headers },
   })
-  if (!r.ok) throw new Error(r.status)
+  if (!r.ok) {
+    const j = await r.json().catch(() => ({}))
+    throw new Error(j.detail || `HTTP ${r.status}`)
+  }
   return r.json()
 }

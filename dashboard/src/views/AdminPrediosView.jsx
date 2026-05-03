@@ -1,16 +1,20 @@
 import { useState } from 'react'
 import { FilePenLine, MapPinned, PlusCircle } from 'lucide-react'
+import { useAuth } from '../hooks/useAuth'
 import AdminPredioView from './AdminPredioView'
 import AdminMapaView from './AdminMapaView'
 import NuevoPredioView from './NuevoPredioView'
 
-const sections = [
+const ALL_SECTIONS = [
   { id: 'editar', label: 'Editar predio', icon: FilePenLine },
   { id: 'mapa', label: 'Posicionar nodos', icon: MapPinned },
-  { id: 'nuevo', label: 'Nuevo predio', icon: PlusCircle },
+  { id: 'nuevo', label: 'Nuevo predio', icon: PlusCircle, writerOnly: true },
 ]
 
 export default function AdminPrediosView({ predioId, predios, onChangePredio, onCreated }) {
+  const { user } = useAuth()
+  const isObservador = user?.rol === 'observador'
+  const sections = ALL_SECTIONS.filter(s => !s.writerOnly || !isObservador)
   const [active, setActive] = useState('editar')
 
   return (

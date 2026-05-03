@@ -89,7 +89,7 @@ def _load_users() -> dict:
             "ernest":   {"nombre": "Ernest",   "usuario": "ernest",   "rol": "admin",      "iniciales": "ED", "password_hash": _hash_pw(DEV_PLACEHOLDER)},
             "salvador": {"nombre": "Salvador", "usuario": "salvador", "rol": "agronomo",   "iniciales": "SV", "password_hash": _hash_pw(DEV_PLACEHOLDER)},
             "carloslp": {"nombre": "Carlos LP","usuario": "carloslp", "rol": "observador", "iniciales": "CL", "password_hash": _hash_pw(DEV_PLACEHOLDER)},
-            "invitado": {"nombre": "Invitado", "usuario": "invitado", "rol": "observador", "iniciales": "IN", "password_hash": _hash_pw(DEV_PLACEHOLDER)},
+            "ycombinator": {"nombre": "Y Combinator", "usuario": "ycombinator", "rol": "observador", "iniciales": "YC", "password_hash": _hash_pw(DEV_PLACEHOLDER)},
         }
     return users
 
@@ -153,3 +153,24 @@ def verificar_token(credentials: HTTPAuthorizationCredentials = Depends(security
         }
     except JWTError:
         raise HTTPException(status_code=401, detail="Token expirado o inválido")
+
+
+# ============================================================
+# ROLE-BASED ACCESS CONTROL
+# ============================================================
+WRITER_ROLES = {"admin", "agronomo"}
+ADMIN_ROLES = {"admin"}
+
+
+def require_writer(user: dict = Depends(verificar_token)) -> dict:
+    """Permite admin y agronomo. Bloquea observador."""
+    if user.get("rol") not in WRITER_ROLES:
+        raise HTTPException(status_code=403, detail="Permisos insuficientes — solo lectura")
+    return user
+
+
+def require_admin(user: dict = Depends(verificar_token)) -> dict:
+    """Solo admin."""
+    if user.get("rol") not in ADMIN_ROLES:
+        raise HTTPException(status_code=403, detail="Requiere permisos de administrador")
+    return user

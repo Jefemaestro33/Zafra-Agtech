@@ -50,6 +50,8 @@ from auth import (
     autenticar_usuario,
     crear_token,
     verificar_token,
+    require_writer,
+    require_admin,
     LoginRequest,
     TokenResponse,
 )
@@ -205,12 +207,12 @@ def auth_me(user: dict = Depends(verificar_token)):
 # ============================================================
 # CONFIG ALERTAS
 # ============================================================
-@app.get("/api/config/alertas")
+@app.get("/api/config/alertas", dependencies=[Depends(verificar_token)])
 def config_alertas_get():
     return get_alert_config_data()
 
 
-@app.put("/api/config/alertas/{section}")
+@app.put("/api/config/alertas/{section}", dependencies=[Depends(require_admin)])
 def config_alertas_update(section: str, datos: dict):
     try:
         return update_alert_config(section, datos)
@@ -218,7 +220,7 @@ def config_alertas_update(section: str, datos: dict):
         raise HTTPException(400, str(e))
 
 
-@app.post("/api/config/alertas/reset")
+@app.post("/api/config/alertas/reset", dependencies=[Depends(require_admin)])
 def config_alertas_reset():
     return reset_alert_config()
 
@@ -226,7 +228,7 @@ def config_alertas_reset():
 # ============================================================
 # PREDIOS
 # ============================================================
-@app.get("/api/predios")
+@app.get("/api/predios", dependencies=[Depends(verificar_token)])
 def listar_predios():
     rows = query("SELECT * FROM predios ORDER BY predio_id")
     if not rows:
@@ -245,7 +247,7 @@ def listar_predios():
     return serialize(rows)
 
 
-@app.post("/api/predios")
+@app.post("/api/predios", dependencies=[Depends(require_writer)])
 def crear_predio(datos: dict):
     """Crea un nuevo predio."""
     required = ["nombre", "cultivo", "hectareas", "municipio"]
@@ -277,7 +279,7 @@ def crear_predio(datos: dict):
                 return JSONResponse(status_code=500, content={"error": str(e)})
 
 
-@app.put("/api/predios/{predio_id}")
+@app.put("/api/predios/{predio_id}", dependencies=[Depends(require_writer)])
 def actualizar_predio(predio_id: int, datos: dict):
     """Actualiza campos editables del predio."""
     campos_permitidos = ["nombre", "cultivo", "tipo_suelo", "hectareas", "municipio", "fecha_instalacion", "lat", "lon"]
@@ -296,7 +298,7 @@ def actualizar_predio(predio_id: int, datos: dict):
         raise HTTPException(500, f"Error al actualizar: {e}")
 
 
-@app.get("/api/predios/{predio_id}/overview")
+@app.get("/api/predios/{predio_id}/overview", dependencies=[Depends(verificar_token)])
 def overview_predio(predio_id: int):
     predio = query("SELECT * FROM predios WHERE predio_id = %s", (predio_id,), one=True)
     if not predio:
@@ -371,7 +373,7 @@ def overview_predio(predio_id: int):
 # ============================================================
 # NODOS
 # ============================================================
-@app.get("/api/predios/{predio_id}/nodos")
+@app.get("/api/predios/{predio_id}/nodos", dependencies=[Depends(verificar_token)])
 def listar_nodos_predio(predio_id: int):
     with get_conn() as conn:
         nodos = query(
@@ -409,7 +411,7 @@ def listar_nodos_predio(predio_id: int):
     return result
 
 
-@app.get("/api/nodos/{nodo_id}")
+@app.get("/api/nodos/{nodo_id}", dependencies=[Depends(verificar_token)])
 def detalle_nodo(nodo_id: int):
     with get_conn() as conn:
         resumen = generar_resumen_nodo(conn, nodo_id)
@@ -418,7 +420,7 @@ def detalle_nodo(nodo_id: int):
     return serialize(resumen)
 
 
-@app.put("/api/nodos/{nodo_id}")
+@app.put("/api/nodos/{nodo_id}", dependencies=[Depends(require_writer)])
 def actualizar_nodo(nodo_id: int, datos: dict):
     """Actualiza coordenadas u otros campos del nodo."""
     campos_permitidos = ["lat", "lon", "nombre", "notas"]
@@ -434,7 +436,7 @@ def actualizar_nodo(nodo_id: int, datos: dict):
         raise HTTPException(500, f"Error al actualizar: {e}")
 
 
-@app.get("/api/nodos/{nodo_id}/lecturas")
+@app.get("/api/nodos/{nodo_id}/lecturas", dependencies=[Depends(verificar_token)])
 def lecturas_nodo(
     nodo_id: int,
     desde: str = Query(None, description="Fecha inicio YYYY-MM-DD"),
@@ -510,7 +512,7 @@ def lecturas_nodo(
 # ============================================================
 # FIRMA HÍDRICA
 # ============================================================
-@app.get("/api/predios/{predio_id}/firma")
+@app.get("/api/predios/{predio_id}/firma", dependencies=[Depends(verificar_token)])
 def firma_predio(predio_id: int):
     rows = query(
         """
@@ -525,7 +527,7 @@ def firma_predio(predio_id: int):
     return serialize(rows)
 
 
-@app.get("/api/nodos/{nodo_id}/firma")
+@app.get("/api/nodos/{nodo_id}/firma", dependencies=[Depends(verificar_token)])
 def firma_nodo(nodo_id: int):
     rows = query(
         """
@@ -542,7 +544,7 @@ def firma_nodo(nodo_id: int):
 # ============================================================
 # COMPARATIVO
 # ============================================================
-@app.get("/api/predios/{predio_id}/comparativo")
+@app.get("/api/predios/{predio_id}/comparativo", dependencies=[Depends(verificar_token)])
 def comparativo_predio(predio_id: int, dias: int = Query(30)):
     sql = """
         SELECT
@@ -626,7 +628,7 @@ def comparativo_predio(predio_id: int, dias: int = Query(30)):
     return resultado
 
 
-@app.post("/api/predios/{predio_id}/cusum")
+@app.post("/api/predios/{predio_id}/cusum", dependencies=[Depends(require_writer)])
 def cusum_predio(predio_id: int, dias: int = Query(180)):
     with get_conn() as conn:
         resultados = cusum_analizar_bloques(conn, predio_id, dias)
@@ -655,7 +657,7 @@ def cusum_predio(predio_id: int, dias: int = Query(180)):
 # ============================================================
 # CLIMA
 # ============================================================
-@app.get("/api/clima/actual")
+@app.get("/api/clima/actual", dependencies=[Depends(verificar_token)])
 def clima_actual():
     row = query(
         """
@@ -684,7 +686,7 @@ def clima_actual():
     }
 
 
-@app.get("/api/clima/historico")
+@app.get("/api/clima/historico", dependencies=[Depends(verificar_token)])
 def clima_historico(dias: int = Query(30)):
     rows = query(
         """
@@ -699,7 +701,7 @@ def clima_historico(dias: int = Query(30)):
     return {"dias": dias, "total": len(rows), "datos": serialize(rows)}
 
 
-@app.get("/api/clima/pronostico")
+@app.get("/api/clima/pronostico", dependencies=[Depends(verificar_token)])
 def clima_pronostico():
     """Próximos 7 días. Usa datos futuros de la tabla si existen, si no intenta fetch live."""
     rows = query(
@@ -740,7 +742,7 @@ def clima_pronostico():
 # ============================================================
 # ALERTAS
 # ============================================================
-@app.get("/api/predios/{predio_id}/alertas")
+@app.get("/api/predios/{predio_id}/alertas", dependencies=[Depends(verificar_token)])
 def alertas_predio(predio_id: int, limit: int = Query(50)):
     rows = query(
         """
@@ -756,7 +758,7 @@ def alertas_predio(predio_id: int, limit: int = Query(50)):
     return serialize(rows)
 
 
-@app.get("/api/nodos/{nodo_id}/alertas")
+@app.get("/api/nodos/{nodo_id}/alertas", dependencies=[Depends(verificar_token)])
 def alertas_nodo(nodo_id: int, limit: int = Query(50)):
     rows = query(
         """
@@ -774,7 +776,7 @@ def alertas_nodo(nodo_id: int, limit: int = Query(50)):
 # ============================================================
 # REGISTROS (POST)
 # ============================================================
-@app.post("/api/tratamientos")
+@app.post("/api/tratamientos", dependencies=[Depends(require_writer)])
 def crear_tratamiento(t: TratamientoCreate):
     # Verificar nodo existe
     nodo = query("SELECT nodo_id FROM nodos WHERE nodo_id = %s", (t.nodo_id,), one=True)
@@ -791,7 +793,7 @@ def crear_tratamiento(t: TratamientoCreate):
     return {"status": "ok", "mensaje": f"Tratamiento registrado para nodo {t.nodo_id}"}
 
 
-@app.post("/api/microbioma")
+@app.post("/api/microbioma", dependencies=[Depends(require_writer)])
 def crear_microbioma(m: MicrobiomaCreate):
     nodo = query("SELECT nodo_id FROM nodos WHERE nodo_id = %s", (m.nodo_id,), one=True)
     if not nodo:
@@ -831,7 +833,7 @@ def crear_microbioma(m: MicrobiomaCreate):
 # ============================================================
 # MICROBIOMA (GET + predicción)
 # ============================================================
-@app.get("/api/microbioma/nodo/{nodo_id}")
+@app.get("/api/microbioma/nodo/{nodo_id}", dependencies=[Depends(verificar_token)])
 def microbioma_nodo(nodo_id: int, limit: int = Query(20)):
     rows = query(
         """
@@ -846,7 +848,7 @@ def microbioma_nodo(nodo_id: int, limit: int = Query(20)):
     return serialize(rows)
 
 
-@app.post("/api/microbioma/predecir/{nodo_id}")
+@app.post("/api/microbioma/predecir/{nodo_id}", dependencies=[Depends(require_writer)])
 def microbioma_predecir_endpoint(nodo_id: int):
     with get_conn() as conn:
         if not microbioma_cache:
@@ -857,7 +859,7 @@ def microbioma_predecir_endpoint(nodo_id: int):
     return resultado
 
 
-@app.get("/api/microbioma/modelo")
+@app.get("/api/microbioma/modelo", dependencies=[Depends(verificar_token)])
 def microbioma_modelo_info():
     if not microbioma_cache:
         with get_conn() as conn:
@@ -876,7 +878,7 @@ def microbioma_modelo_info():
 # ============================================================
 # LLM DIAGNÓSTICOS
 # ============================================================
-@app.post("/api/alertas/{evento_id}/diagnostico")
+@app.post("/api/alertas/{evento_id}/diagnostico", dependencies=[Depends(require_writer)])
 def diagnosticar_evento_endpoint(evento_id: int):
     with get_conn() as conn:
         diagnostico = diagnosticar_evento(conn, evento_id)
@@ -885,21 +887,21 @@ def diagnosticar_evento_endpoint(evento_id: int):
     return {"diagnostico": diagnostico, "evento_id": evento_id}
 
 
-@app.post("/api/reportes/semanal")
+@app.post("/api/reportes/semanal", dependencies=[Depends(require_writer)])
 def reporte_semanal_endpoint(predio_id: int = Query(1)):
     with get_conn() as conn:
         reporte = generar_reporte_semanal(conn, predio_id)
     return {"reporte": reporte}
 
 
-@app.post("/api/reportes/agricultor")
+@app.post("/api/reportes/agricultor", dependencies=[Depends(require_writer)])
 def reporte_agricultor_endpoint(predio_id: int = Query(1)):
     with get_conn() as conn:
         reporte = generar_reporte_agricultor(conn, predio_id)
     return {"reporte": reporte}
 
 
-@app.post("/api/diagnostico/visual")
+@app.post("/api/diagnostico/visual", dependencies=[Depends(require_writer)])
 def diagnostico_visual_endpoint(req: DiagnosticoVisualRequest):
     with get_conn() as conn:
         resumen = generar_resumen_nodo(conn, req.nodo_id)
@@ -914,7 +916,7 @@ def diagnostico_visual_endpoint(req: DiagnosticoVisualRequest):
 # ============================================================
 # EXPORT CSV
 # ============================================================
-@app.get("/api/export/lecturas")
+@app.get("/api/export/lecturas", dependencies=[Depends(verificar_token)])
 def export_lecturas(
     predio_id: int = Query(1),
     dias: int = Query(7),
@@ -955,7 +957,7 @@ def export_lecturas(
     )
 
 
-@app.get("/api/export/alertas")
+@app.get("/api/export/alertas", dependencies=[Depends(verificar_token)])
 def export_alertas(predio_id: int = Query(1)):
     """Export alerts as CSV."""
     import io
@@ -988,7 +990,7 @@ def export_alertas(predio_id: int = Query(1)):
     )
 
 
-@app.get("/api/export/firma")
+@app.get("/api/export/firma", dependencies=[Depends(verificar_token)])
 def export_firma(predio_id: int = Query(1)):
     """Export firma hidrica as CSV."""
     import io
@@ -1082,7 +1084,7 @@ class RiegoRequest(BaseModel):
 
 
 @app.post("/api/riegos")
-def registrar_riego(riego: RiegoRequest, user=Depends(verificar_token)):
+def registrar_riego(riego: RiegoRequest, user=Depends(require_writer)):
     """Registrar un evento de riego."""
     try:
         with get_conn() as conn:
@@ -1140,7 +1142,7 @@ class FoliarRequest(BaseModel):
 
 
 @app.post("/api/analisis-foliar")
-def registrar_foliar(data: FoliarRequest, user=Depends(verificar_token)):
+def registrar_foliar(data: FoliarRequest, user=Depends(require_writer)):
     """Registrar resultado de análisis foliar."""
     try:
         with get_conn() as conn:

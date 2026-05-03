@@ -136,6 +136,15 @@ export default function App() {
               <Leaf size={16} style={{ color: 'var(--color-accent-green)' }} />
             </div>
             <h1 className="text-sm font-bold tracking-tight" style={{ color: 'var(--color-text-primary)' }}>Zafra</h1>
+            {user?.rol === 'observador' && (
+              <span
+                className="text-[9px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-md"
+                style={{ background: 'rgba(245,158,11,0.12)', color: 'var(--color-accent-amber)', border: '1px solid rgba(245,158,11,0.3)' }}
+                title="Tu cuenta es de solo lectura — no puedes modificar datos."
+              >
+                Solo lectura
+              </span>
+            )}
           </div>
           <div className="flex items-center gap-2">
             <button onClick={() => navigate('/alertas')}
@@ -249,7 +258,7 @@ export default function App() {
                     </div>
                     <div className="min-w-0 text-left">
                       <p className="text-sm font-medium truncate" style={{ color: 'var(--color-text-primary)' }}>{user.nombre}</p>
-                      <p className="text-[10px]" style={{ color: 'var(--color-text-muted)' }}>{user.rol === 'admin' ? 'Admin' : 'Agrónomo'}</p>
+                      <p className="text-[10px]" style={{ color: 'var(--color-text-muted)' }}>{user.rol === 'admin' ? 'Admin' : user.rol === 'agronomo' ? 'Agrónomo' : 'Solo lectura'}</p>
                     </div>
                     <ChevronUp size={14} className="ml-auto" style={{ color: 'var(--color-text-muted)', transform: profileMenuOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }} />
                   </button>
@@ -288,7 +297,7 @@ export default function App() {
                   onClick={() => setProfileMenuOpen(!profileMenuOpen)}
                   className="w-10 h-10 rounded-xl flex items-center justify-center text-xs font-bold transition-colors"
                   style={{ background: profileMenuOpen ? 'var(--color-surface-3)' : 'var(--color-accent-green-dim)', color: 'var(--color-accent-green)', border: '1px solid rgba(16,185,129,0.2)' }}
-                  title={`${user.nombre} — ${user.rol === 'admin' ? 'Admin' : 'Agrónomo'}`}
+                  title={`${user.nombre} — ${user.rol === 'admin' ? 'Admin' : user.rol === 'agronomo' ? 'Agrónomo' : 'Solo lectura'}`}
                 >
                   {user.iniciales}
                 </button>
