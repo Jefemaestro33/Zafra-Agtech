@@ -15,6 +15,10 @@ export default function ProfileMenu({ user, compact = false, onClose, onLogout }
 
   const go = (path) => { onClose(); navigate(path) }
 
+  // Observador (YC u otros visualizadores) no ve la sección de configuración.
+  const isObservador = user?.rol === 'observador'
+  const configItems = isObservador ? [] : CONFIG_ITEMS
+
   return (
     <>
       <div className="fixed inset-0" style={{ zIndex: 60 }} onClick={onClose} />
@@ -38,12 +42,12 @@ export default function ProfileMenu({ user, compact = false, onClose, onLogout }
           </p>
         </div>
 
-        {!compact && (
+        {!compact && configItems.length > 0 && (
           <p className="px-4 pt-2 pb-1 text-[9px] font-semibold uppercase tracking-widest"
             style={{ color: 'var(--color-text-muted)' }}>Configuración</p>
         )}
 
-        {CONFIG_ITEMS.map((item, i) => (
+        {configItems.map((item, i) => (
           <button key={i} onClick={() => go(item.path)}
             className="w-full flex items-center gap-3 px-4 py-2 text-left transition-colors hover-surface-4">
             <item.icon size={compact ? 14 : 15} style={{ color: 'var(--color-text-muted)' }} />
@@ -58,7 +62,9 @@ export default function ProfileMenu({ user, compact = false, onClose, onLogout }
           </button>
         ))}
 
-        <div className="my-1 mx-3" style={{ borderTop: '1px solid var(--color-border)' }} />
+        {configItems.length > 0 && (
+          <div className="my-1 mx-3" style={{ borderTop: '1px solid var(--color-border)' }} />
+        )}
 
         <button onClick={() => go('/docs')}
           className="w-full flex items-center gap-3 px-4 py-2 text-left transition-colors hover-surface-4">

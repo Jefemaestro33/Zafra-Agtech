@@ -98,6 +98,11 @@ export default function App() {
     window.location.replace('/')
   }
 
+  // Observador (cuenta YC, etc.) no ve la sección "Administrador" del sidebar.
+  const visibleTabs = user?.rol === 'observador'
+    ? tabs.slice(0, tabs.findIndex(t => t.type === 'section' && t.label === 'Administrador'))
+    : tabs
+
   // Auth loading screen
   if (authLoading) {
     return (
@@ -190,7 +195,7 @@ export default function App() {
             <div className="flex flex-col flex-1 min-h-0">
               <div className="px-3 pb-4 flex-1 overflow-y-auto scrollbar-none">
                 <nav className="space-y-0.5">
-                  {tabs.map((t, idx) => {
+                  {visibleTabs.map((t, idx) => {
                     if (t.type === 'section') return (
                       <div key={idx} className="pt-4 pb-1 px-1">
                         <div className="mb-2" style={{ borderTop: '1px solid var(--color-border)' }} />
@@ -274,7 +279,7 @@ export default function App() {
           {collapsed && (
             <div className="flex flex-col flex-1 min-h-0">
               <nav className="px-1.5 pb-4 space-y-1 flex-1 overflow-y-auto scrollbar-none">
-                {tabs.map((t, idx) => {
+                {visibleTabs.map((t, idx) => {
                   if (t.type === 'section') return <div key={idx} className="my-2 mx-2" style={{ borderBottom: '1px solid var(--color-border)' }} />
                   const active = isTabActive(t); const Icon = t.icon
                   return (
