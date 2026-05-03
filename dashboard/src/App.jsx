@@ -93,7 +93,12 @@ export default function App() {
   useEffect(() => { setMobileOpen(false); setProfileMenuOpen(false) }, [location.pathname])
   useEffect(() => { if (location.pathname.startsWith('/alertas')) setAlertasOpen(true) }, [location.pathname])
 
-  const handleLogout = () => { logout(); navigate('/') }
+  const handleLogout = () => {
+    logout()
+    // Hard reload: evita race con /api/auth/me en flight, limpia memoria
+    // de cualquier fetch con el token viejo, y fuerza el SPA al estado inicial.
+    window.location.href = '/'
+  }
 
   // Auth loading screen
   if (authLoading) {
