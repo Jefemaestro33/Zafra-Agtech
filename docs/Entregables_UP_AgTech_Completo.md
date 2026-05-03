@@ -843,7 +843,7 @@ El generador de datos sinteticos modela 5 escenarios especificos para validar qu
 
 ### 12.1 Estado actual del prototipo funcional
 
-**URL de produccion:** https://agtech-sistema-production.up.railway.app/
+**URL de produccion:** https://zafra-production.up.railway.app/
 
 **Fecha de deploy:** Marzo 2026 (auto-deploy en cada push a main)
 

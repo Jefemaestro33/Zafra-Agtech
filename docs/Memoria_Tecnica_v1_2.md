@@ -188,7 +188,7 @@ Listo para flashear cuando llegue el hardware. Solo cambiar `NODO_ID` por nodo.
 | Servicio | Estado | URL/Detalle |
 |----------|--------|-------------|
 | Railway PostgreSQL | Produccion | 8 tablas, 420K+ registros, indices y FK |
-| Railway App (API + Dashboard) | Produccion | https://agtech-sistema-production.up.railway.app/ |
+| Railway App (API + Dashboard) | Produccion | https://zafra-production.up.railway.app/ |
 | GitHub repo | Privado | Jefemaestro33/agtech-sistema, auto-deploy en cada push |
 | Dockerfile | Multi-stage | Node 20 (build React) + Python 3.13 (serve FastAPI) |
 | PWA | Instalable | manifest.json + service worker |
@@ -587,9 +587,9 @@ Detalle completo en `docs/Presupuesto_Piloto_Nextipac.xlsx`.
 
 | Recurso | URL |
 |---------|-----|
-| Landing page (publica) | https://agtech-sistema-production.up.railway.app/ |
-| Dashboard (requiere login) | https://agtech-sistema-production.up.railway.app/ (login) |
-| API docs (Swagger) | https://agtech-sistema-production.up.railway.app/docs |
+| Landing page (publica) | https://zafra-production.up.railway.app/ |
+| Dashboard (requiere login) | https://zafra-production.up.railway.app/ (login) |
+| API docs (Swagger) | https://zafra-production.up.railway.app/docs |
 | Repositorio GitHub | github.com/Jefemaestro33/agtech-sistema (privado) |
 
 ---
