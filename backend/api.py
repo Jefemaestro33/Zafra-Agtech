@@ -15,7 +15,7 @@ from typing import Optional
 
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException, Query, Depends
+from fastapi import FastAPI, HTTPException, Query, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse
@@ -155,7 +155,7 @@ class DiagnosticoVisualRequest(BaseModel):
 
 
 # ============================================================
-# AUTH (with rate limiting)
+# AUTH (with rate limiting + audit log)
 # ============================================================
 _login_attempts = {}  # {ip: [timestamp, timestamp, ...]}
 _MAX_LOGIN_ATTEMPTS = 5
@@ -166,27 +166,98 @@ def _check_rate_limit(client_ip: str):
     import time
     now = time.time()
     attempts = _login_attempts.get(client_ip, [])
-    # Clean old attempts
     attempts = [t for t in attempts if now - t < _LOGIN_WINDOW_SECONDS]
     _login_attempts[client_ip] = attempts
     if len(attempts) >= _MAX_LOGIN_ATTEMPTS:
         raise HTTPException(429, "Demasiados intentos. Espera 5 minutos.")
 
 
+def _init_auth_logs_table():
+    """Idempotent table creation for login audit log. Runs on app boot."""
+    if not DATABASE_URL:
+        return
+    try:
+        execute("""
+            CREATE TABLE IF NOT EXISTS auth_logs (
+                id          SERIAL PRIMARY KEY,
+                ts          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                usuario     VARCHAR(64) NOT NULL,
+                rol         VARCHAR(32),
+                ip          VARCHAR(64),
+                user_agent  VARCHAR(512),
+                success     BOOLEAN NOT NULL DEFAULT TRUE
+            )
+        """)
+        execute("CREATE INDEX IF NOT EXISTS idx_auth_logs_ts ON auth_logs (ts DESC)")
+    except Exception as e:
+        import logging
+        logging.warning(f"auth_logs table init failed: {e}")
+
+
+def _client_ip(request: Request) -> str:
+    """Extract client IP, preferring X-Forwarded-For (set by Railway proxy)."""
+    fwd = request.headers.get("x-forwarded-for", "")
+    if fwd:
+        return fwd.split(",")[0].strip()
+    return request.client.host if request.client else ""
+
+
+def _log_login(usuario: str, rol: str | None, ip: str, user_agent: str, success: bool):
+    """Best-effort audit log write — must never block login."""
+    try:
+        execute(
+            "INSERT INTO auth_logs (usuario, rol, ip, user_agent, success) VALUES (%s, %s, %s, %s, %s)",
+            (usuario[:64], rol, ip[:64] if ip else None, (user_agent or "")[:512], success),
+        )
+    except Exception as e:
+        import logging
+        logging.warning(f"auth_logs insert failed: {e}")
+
+
+# In-memory geolocation cache: ip -> ({country, city, org}, timestamp)
+_geo_cache: dict = {}
+_GEO_TTL = 3600  # 1h
+
+def _geolocate(ip: str) -> dict:
+    """Resolve IP → country/city via ip-api.com (free, rate-limited, no key).
+    Cached 1h to avoid hammering. Returns {} on failure or private IP."""
+    if not ip or ip in ("127.0.0.1", "localhost", "::1") or ip.startswith(("10.", "192.168.", "172.")):
+        return {}
+    import time as _t
+    cached = _geo_cache.get(ip)
+    if cached and _t.time() - cached[1] < _GEO_TTL:
+        return cached[0]
+    try:
+        import urllib.request, json as _json
+        url = f"http://ip-api.com/json/{ip}?fields=status,country,city,org,query"
+        with urllib.request.urlopen(url, timeout=2.5) as r:
+            data = _json.loads(r.read().decode())
+        result = {"country": data.get("country"), "city": data.get("city"), "org": data.get("org")} if data.get("status") == "success" else {}
+    except Exception:
+        result = {}
+    _geo_cache[ip] = (result, _t.time())
+    return result
+
+
+_init_auth_logs_table()
+
+
 @app.post("/api/auth/login")
-def login(req: LoginRequest):
-    from fastapi import Request as FastAPIRequest
-    # Rate limit by simple counter (no request object needed for basic protection)
+def login(req: LoginRequest, request: Request):
+    ip = _client_ip(request)
+    user_agent = (request.headers.get("user-agent") or "")[:512]
+
     rate_key = req.usuario.lower().strip()
     _check_rate_limit(rate_key)
 
     user = autenticar_usuario(req.usuario, req.password)
     if not user:
         import time
+        _log_login(rate_key, None, ip, user_agent, success=False)
         _login_attempts.setdefault(rate_key, []).append(time.time())
         raise HTTPException(status_code=401, detail="Usuario o contraseña incorrectos")
 
-    # Clear attempts on success
+    _log_login(user["usuario"], user["rol"], ip, user_agent, success=True)
     _login_attempts.pop(rate_key, None)
     token = crear_token(user["usuario"], user["rol"])
     return TokenResponse(
@@ -201,6 +272,21 @@ def login(req: LoginRequest):
 @app.get("/api/auth/me")
 def auth_me(user: dict = Depends(verificar_token)):
     return user
+
+
+@app.get("/api/auth/logs", dependencies=[Depends(require_admin)])
+def auth_logs(limit: int = Query(100, ge=1, le=500), offset: int = Query(0, ge=0)):
+    """Audit log de logins. Solo admin. Enriquece con geolocalización."""
+    rows = query(
+        "SELECT id, ts, usuario, rol, ip, user_agent, success FROM auth_logs ORDER BY ts DESC LIMIT %s OFFSET %s",
+        (limit, offset),
+    )
+    unique_ips = {r["ip"] for r in rows if r.get("ip")}
+    geo = {ip: _geolocate(ip) for ip in unique_ips}
+    return [
+        {**serialize(r), **(geo.get(r.get("ip")) or {})}
+        for r in rows
+    ]
 
 
 
