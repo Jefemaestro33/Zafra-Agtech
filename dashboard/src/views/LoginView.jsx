@@ -72,12 +72,6 @@ export default function LoginView({ onLogin }) {
           >
             Zafra
           </h1>
-          <p
-            className="text-xs mt-1"
-            style={{ color: 'var(--color-text-muted)' }}
-          >
-            Sistema de monitoreo inteligente
-          </p>
         </div>
 
         {/* Card */}
@@ -215,13 +209,6 @@ export default function LoginView({ onLogin }) {
           </form>
         </div>
 
-        {/* Footer */}
-        <p
-          className="text-center text-[10px] mt-6"
-          style={{ color: 'var(--color-text-muted)' }}
-        >
-          Zafra · v2.0
-        </p>
       </div>
 
       {/* Shake animation */}
