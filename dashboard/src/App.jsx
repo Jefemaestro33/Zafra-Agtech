@@ -140,7 +140,7 @@ export default function App() {
             <button className="lg:hidden p-1.5 rounded-lg" style={{ color: 'var(--color-text-muted)' }} onClick={() => setMobileOpen(!mobileOpen)}>
               {mobileOpen ? <X size={20} /> : <Menu size={20} />}
             </button>
-            <h1 className="text-xl font-bold tracking-tight" style={{ color: 'var(--color-text-primary)' }}>Zafra</h1>
+            <h1 className="text-2xl tracking-tight" style={{ color: 'var(--color-text-primary)', fontFamily: '"Fraunces", Georgia, serif', fontWeight: 700 }}>Zafra</h1>
           </div>
           <div className="flex items-center gap-2">
             <button onClick={() => navigate('/alertas')}

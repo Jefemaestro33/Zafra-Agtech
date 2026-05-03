@@ -67,8 +67,8 @@ export default function LoginView({ onLogin }) {
             <Leaf size={28} style={{ color: 'var(--color-accent-green)' }} />
           </div>
           <h1
-            className="text-xl font-bold tracking-tight"
-            style={{ color: 'var(--color-text-primary)' }}
+            className="text-3xl tracking-tight"
+            style={{ color: 'var(--color-text-primary)', fontFamily: '"Fraunces", Georgia, serif', fontWeight: 700 }}
           >
             Zafra
           </h1>
