@@ -135,14 +135,38 @@ export default function App() {
     <div className="min-h-screen flex flex-col" style={{ background: 'var(--color-surface-0)' }}>
       {/* Header */}
       <header className="fixed top-0 left-0 right-0 z-50" style={{ background: 'var(--color-surface-1)', borderBottom: '1px solid var(--color-border)' }}>
-        <div className="px-4 sm:px-6 h-12 flex items-center justify-between">
+        {/* Mobile: hamburger + wordmark + bell */}
+        <div className="lg:hidden h-12 flex items-center justify-between px-4 sm:px-6">
           <div className="flex items-center gap-3">
-            <button className="lg:hidden p-1.5 rounded-lg" style={{ color: 'var(--color-text-muted)' }} onClick={() => setMobileOpen(!mobileOpen)}>
+            <button className="p-1.5 rounded-lg" style={{ color: 'var(--color-text-muted)' }} onClick={() => setMobileOpen(!mobileOpen)}>
               {mobileOpen ? <X size={20} /> : <Menu size={20} />}
             </button>
             <h1 className="text-2xl tracking-tight" style={{ color: 'var(--color-text-primary)', fontFamily: '"Fraunces", Georgia, serif', fontWeight: 700 }}>Zafra</h1>
           </div>
-          <div className="flex items-center gap-2">
+          <button onClick={() => navigate('/alertas')}
+            className="relative p-2 rounded-lg transition-colors hover-surface"
+            style={{ color: hasAlerts ? 'var(--color-accent-amber)' : 'var(--color-text-muted)' }}>
+            <Bell size={18} />
+            {hasAlerts && (
+              <span className="absolute -top-0.5 -right-0.5 text-[10px] font-bold rounded-full w-[18px] h-[18px] flex items-center justify-center"
+                style={{ background: 'var(--color-accent-red)', color: '#fff' }}>{alertCount}</span>
+            )}
+          </button>
+        </div>
+        {/* Desktop: wordmark centered in sidebar-width column, bell on right */}
+        <div className="hidden lg:flex h-12 items-center">
+          <div
+            className="flex items-center justify-center shrink-0 overflow-hidden transition-[width] duration-200 ease-out"
+            style={{ width: collapsed ? 60 : 220 }}
+          >
+            <h1
+              className="text-2xl tracking-tight whitespace-nowrap transition-opacity duration-150"
+              style={{ color: 'var(--color-text-primary)', fontFamily: '"Fraunces", Georgia, serif', fontWeight: 700, opacity: collapsed ? 0 : 1 }}
+            >
+              Zafra
+            </h1>
+          </div>
+          <div className="flex-1 flex items-center justify-end px-6">
             <button onClick={() => navigate('/alertas')}
               className="relative p-2 rounded-lg transition-colors hover-surface"
               style={{ color: hasAlerts ? 'var(--color-accent-amber)' : 'var(--color-text-muted)' }}>
