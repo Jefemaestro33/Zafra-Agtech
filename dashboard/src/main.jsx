@@ -8,7 +8,6 @@ import App from './App'
 import './index.css'
 import { migrateAgtechToZafra } from './utils/migrateLocalStorage'
 
-console.log('[Zafra] bundle 2026-05-03-logout-v3 loaded')
 migrateAgtechToZafra()
 
 // Bridge: connect useApi errors to toast system

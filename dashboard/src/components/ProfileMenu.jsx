@@ -21,6 +21,9 @@ export default function ProfileMenu({ user, compact = false, onClose, onLogout }
       <div
         className="rounded-2xl py-2 animate-in shadow-2xl"
         style={{
+          // position must be set for z-index to apply; the spread below
+          // overrides to 'fixed' in compact mode.
+          position: 'relative',
           zIndex: 70,
           background: 'var(--color-surface-3)',
           border: '1px solid var(--color-border-light)',
