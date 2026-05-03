@@ -94,10 +94,26 @@ export default function App() {
   useEffect(() => { if (location.pathname.startsWith('/alertas')) setAlertasOpen(true) }, [location.pathname])
 
   const handleLogout = () => {
-    logout()
-    // Hard reload: evita race con /api/auth/me en flight, limpia memoria
-    // de cualquier fetch con el token viejo, y fuerza el SPA al estado inicial.
-    window.location.href = '/'
+    console.log('[Zafra] logout v3: starting')
+    try { logout() } catch (e) { console.warn('[Zafra] logout() threw', e) }
+    try {
+      localStorage.removeItem('zafra_auth')
+      localStorage.removeItem('agtech_auth')
+      sessionStorage.clear()
+      console.log('[Zafra] storage cleared')
+    } catch (e) { console.warn('[Zafra] storage clear failed', e) }
+    try {
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then(rs => rs.forEach(r => r.unregister()))
+      }
+    } catch {}
+    try {
+      if ('caches' in window) {
+        caches.keys().then(ks => ks.forEach(k => caches.delete(k)))
+      }
+    } catch {}
+    console.log('[Zafra] redirecting to /?logout=...')
+    window.location.replace('/?logout=' + Date.now())
   }
 
   // Auth loading screen
