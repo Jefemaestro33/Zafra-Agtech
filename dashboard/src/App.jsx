@@ -140,19 +140,7 @@ export default function App() {
             <button className="lg:hidden p-1.5 rounded-lg" style={{ color: 'var(--color-text-muted)' }} onClick={() => setMobileOpen(!mobileOpen)}>
               {mobileOpen ? <X size={20} /> : <Menu size={20} />}
             </button>
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: 'var(--color-glow-green)', border: '1px solid var(--color-accent-green-dim)' }}>
-              <Leaf size={16} style={{ color: 'var(--color-accent-green)' }} />
-            </div>
-            <h1 className="text-sm font-bold tracking-tight" style={{ color: 'var(--color-text-primary)' }}>Zafra</h1>
-            {user?.rol === 'observador' && (
-              <span
-                className="text-[9px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-md"
-                style={{ background: 'rgba(245,158,11,0.12)', color: 'var(--color-accent-amber)', border: '1px solid rgba(245,158,11,0.3)' }}
-                title="Tu cuenta es de solo lectura — no puedes modificar datos."
-              >
-                Solo lectura
-              </span>
-            )}
+            <h1 className="text-xl font-bold tracking-tight" style={{ color: 'var(--color-text-primary)' }}>Zafra</h1>
           </div>
           <div className="flex items-center gap-2">
             <button onClick={() => navigate('/alertas')}
