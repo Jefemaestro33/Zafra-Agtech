@@ -1,9 +1,8 @@
 """
-auth.py — Autenticación JWT para AgTech Sistema
-Usuarios hardcoded con bcrypt. Tokens JWT con expiración.
-
-Uso:
-  from auth import verificar_token, USUARIOS
+auth.py — Autenticación JWT para Zafra
+Usuarios desde AUTH_USERS env var (JSON) o AUTH_USER_N / AUTH_PASS_N.
+Sin esos env vars, arranca con un fallback de DEV con passwords
+intencionalmente débiles. NUNCA usar el fallback en producción.
 """
 import os
 import json
@@ -22,7 +21,7 @@ from pydantic import BaseModel
 JWT_SECRET = os.environ.get("JWT_SECRET")
 if not JWT_SECRET:
     import logging
-    JWT_SECRET = "agtech-dev-secret-change-me-in-production"
+    JWT_SECRET = "zafra-dev-secret-change-me-in-production"
     logging.warning("JWT_SECRET not set — using insecure dev default. Set JWT_SECRET env var in production!")
 JWT_ALGORITHM = "HS256"
 JWT_EXPIRATION_HOURS = 2
@@ -85,35 +84,12 @@ def _load_users() -> dict:
             "No AUTH_USERS or AUTH_USER_N env vars found — using default dev users. "
             "Set env vars in production!"
         )
+        DEV_PLACEHOLDER = "dev-only-set-AUTH_USERS-in-prod"
         return {
-            "ernest": {
-                "nombre": "Ernest",
-                "usuario": "ernest",
-                "rol": "admin",
-                "iniciales": "ED",
-                "password_hash": _hash_pw(os.environ.get("DEFAULT_ADMIN_PASS", "admin123")),
-            },
-            "salvador": {
-                "nombre": "Salvador",
-                "usuario": "salvador",
-                "rol": "agronomo",
-                "iniciales": "SV",
-                "password_hash": _hash_pw(os.environ.get("DEFAULT_AGRO_PASS", "campo123")),
-            },
-            "carloslp": {
-                "nombre": "Carlos LP",
-                "usuario": "carloslp",
-                "rol": "observador",
-                "iniciales": "CL",
-                "password_hash": _hash_pw("Nxt#Agr0_C4rlos!2026"),
-            },
-            "invitado": {
-                "nombre": "Invitado",
-                "usuario": "invitado",
-                "rol": "observador",
-                "iniciales": "IN",
-                "password_hash": _hash_pw("AgTech_Visit4nte"),
-            },
+            "ernest":   {"nombre": "Ernest",   "usuario": "ernest",   "rol": "admin",      "iniciales": "ED", "password_hash": _hash_pw(DEV_PLACEHOLDER)},
+            "salvador": {"nombre": "Salvador", "usuario": "salvador", "rol": "agronomo",   "iniciales": "SV", "password_hash": _hash_pw(DEV_PLACEHOLDER)},
+            "carloslp": {"nombre": "Carlos LP","usuario": "carloslp", "rol": "observador", "iniciales": "CL", "password_hash": _hash_pw(DEV_PLACEHOLDER)},
+            "invitado": {"nombre": "Invitado", "usuario": "invitado", "rol": "observador", "iniciales": "IN", "password_hash": _hash_pw(DEV_PLACEHOLDER)},
         }
     return users
 
