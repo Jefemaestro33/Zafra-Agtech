@@ -39,7 +39,7 @@ const TILES = {
 
 export default function OverviewView({ predioId }) {
   const { data, loading } = useApi(`/api/predios/${predioId}/overview`)
-  const [tileMode, setTileMode] = useState('esri')
+  const [tileMode, setTileMode] = useState('google')
   const navigate = useNavigate()
 
   if (loading) return <Loading />
@@ -110,8 +110,8 @@ export default function OverviewView({ predioId }) {
           </h2>
           <div className="flex gap-1">
             {[
-              { key: 'esri', label: 'Esri', Icon: Satellite },
               { key: 'google', label: 'Google', Icon: Globe },
+              { key: 'esri', label: 'Esri', Icon: Satellite },
               { key: 'mapa', label: 'Mapa', Icon: Map },
             ].map(m => (
               <button
