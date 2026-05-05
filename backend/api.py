@@ -143,6 +143,13 @@ class NotaCreate(BaseModel):
     contenido: str
 
 
+class WhatsAppSendRequest(BaseModel):
+    mensaje: str
+    destino: str = "productor"  # productor | agronomo | equipo
+    nodo_id: Optional[int] = None
+    predio_id: Optional[int] = None
+
+
 class MicrobiomaCreate(BaseModel):
     nodo_id: int
     profundidad: int = 15
@@ -263,8 +270,35 @@ def _init_notas_nodo_table():
         logging.warning(f"notas_nodo table init failed: {e}")
 
 
+def _init_wa_outbox_table():
+    """Idempotent: log de cada WhatsApp que el sistema envía (al productor, agrónomo, manual)."""
+    if not DATABASE_URL:
+        return
+    try:
+        execute("""
+            CREATE TABLE IF NOT EXISTS wa_outbox (
+                id        SERIAL PRIMARY KEY,
+                ts        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                telefono  VARCHAR(32),
+                destino   VARCHAR(32),
+                nodo_id   INT,
+                predio_id INT,
+                mensaje   TEXT NOT NULL,
+                success   BOOLEAN NOT NULL DEFAULT FALSE,
+                error_msg TEXT
+            )
+        """)
+        execute("CREATE INDEX IF NOT EXISTS idx_wa_outbox_ts ON wa_outbox (ts DESC)")
+        execute("CREATE INDEX IF NOT EXISTS idx_wa_outbox_nodo_ts ON wa_outbox (nodo_id, ts DESC)")
+        execute("CREATE INDEX IF NOT EXISTS idx_wa_outbox_predio_ts ON wa_outbox (predio_id, ts DESC)")
+    except Exception as e:
+        import logging
+        logging.warning(f"wa_outbox table init failed: {e}")
+
+
 _init_auth_logs_table()
 _init_notas_nodo_table()
+_init_wa_outbox_table()
 
 
 @app.post("/api/auth/login")
@@ -312,6 +346,60 @@ def auth_logs(limit: int = Query(100, ge=1, le=500), offset: int = Query(0, ge=0
         {**serialize(r), **(geo.get(r.get("ip")) or {})}
         for r in rows
     ]
+
+
+# ============================================================
+# WHATSAPP OUTBOX (log de mensajes enviados al productor / agrónomo)
+# ============================================================
+@app.get("/api/wa/outbox", dependencies=[Depends(verificar_token)])
+def wa_outbox(
+    predio_id: Optional[int] = Query(None),
+    nodo_id: Optional[int] = Query(None),
+    limit: int = Query(100, ge=1, le=500),
+    offset: int = Query(0, ge=0),
+):
+    """Lista mensajes WhatsApp enviados, opcionalmente filtrados por predio o nodo."""
+    where = []
+    params = []
+    if predio_id is not None:
+        where.append("predio_id = %s")
+        params.append(predio_id)
+    if nodo_id is not None:
+        where.append("nodo_id = %s")
+        params.append(nodo_id)
+    where_sql = (" WHERE " + " AND ".join(where)) if where else ""
+    params.extend([limit, offset])
+    rows = query(
+        f"SELECT id, ts, telefono, destino, nodo_id, predio_id, mensaje, success, error_msg "
+        f"FROM wa_outbox{where_sql} ORDER BY ts DESC LIMIT %s OFFSET %s",
+        tuple(params),
+    )
+    return serialize(rows)
+
+
+@app.post("/api/wa/send")
+def wa_send_manual(req: WhatsAppSendRequest, user: dict = Depends(require_writer)):
+    """Envía un mensaje manual desde el dashboard al productor o agrónomo."""
+    msg = (req.mensaje or "").strip()
+    if not msg:
+        raise HTTPException(400, "Mensaje vacío")
+    if len(msg) > 4096:
+        msg = msg[:4096]
+    autor = (user.get("nombre") or user.get("usuario") or "?")[:40]
+    cuerpo = f"{msg}\n\n— enviado por {autor} desde Zafra"
+    try:
+        from whatsapp import enviar_a_productor, enviar_a_agronomo, enviar_a_equipo
+    except Exception as e:
+        raise HTTPException(500, f"Módulo whatsapp no disponible: {e}")
+
+    destino = (req.destino or "productor").lower()
+    if destino == "agronomo":
+        ok = enviar_a_agronomo(cuerpo, nodo_id=req.nodo_id, predio_id=req.predio_id)
+    elif destino == "equipo":
+        ok = enviar_a_equipo(cuerpo, nodo_id=req.nodo_id, predio_id=req.predio_id)
+    else:
+        ok = enviar_a_productor(cuerpo, nodo_id=req.nodo_id, predio_id=req.predio_id)
+    return {"status": "ok" if ok else "logged_only", "enviado": ok, "destino": destino}
 
 
 
@@ -853,6 +941,23 @@ def clima_pronostico():
 # ============================================================
 # ALERTAS
 # ============================================================
+@app.get("/api/predios/{predio_id}/notas", dependencies=[Depends(verificar_token)])
+def listar_notas_predio(predio_id: int, limit: int = Query(100, ge=1, le=500)):
+    """Feed cronológico de notas de todos los nodos del predio."""
+    rows = query(
+        """
+        SELECT n.id, n.ts, n.autor, n.contenido, n.nodo_id, no.nombre AS nodo_nombre, no.bloque
+        FROM notas_nodo n
+        JOIN nodos no ON n.nodo_id = no.nodo_id
+        WHERE no.predio_id = %s
+        ORDER BY n.ts DESC
+        LIMIT %s
+        """,
+        (predio_id, limit),
+    )
+    return serialize(rows)
+
+
 @app.get("/api/predios/{predio_id}/alertas", dependencies=[Depends(verificar_token)])
 def alertas_predio(predio_id: int, limit: int = Query(50)):
     rows = query(
@@ -942,6 +1047,14 @@ def timeline_nodo(nodo_id: int, limit: int = Query(200, ge=1, le=1000)):
         "SELECT id, ts, autor, contenido FROM notas_nodo WHERE nodo_id = %s ORDER BY ts DESC LIMIT %s",
         (nodo_id, limit),
     )
+    whatsapp_msgs = []
+    try:
+        whatsapp_msgs = query(
+            "SELECT id, ts, telefono, destino, mensaje, success, error_msg FROM wa_outbox WHERE nodo_id = %s ORDER BY ts DESC LIMIT %s",
+            (nodo_id, limit),
+        )
+    except Exception:
+        whatsapp_msgs = []
 
     items = []
     for e in eventos:
@@ -970,6 +1083,17 @@ def timeline_nodo(nodo_id: int, limit: int = Query(200, ge=1, le=1000)):
             "ts": n["ts"],
             "autor": n["autor"],
             "contenido": n["contenido"],
+        })
+    for w in whatsapp_msgs:
+        items.append({
+            "kind": "whatsapp",
+            "id": f"w{w['id']}",
+            "ts": w["ts"],
+            "destino": w["destino"],
+            "telefono": w["telefono"],
+            "contenido": w["mensaje"],
+            "success": w["success"],
+            "error_msg": w["error_msg"],
         })
 
     items.sort(key=lambda x: x["ts"])

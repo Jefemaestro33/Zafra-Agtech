@@ -1,6 +1,6 @@
 import { useState, useEffect, lazy, Suspense } from 'react'
 import { createPortal } from 'react-dom'
-import { Routes, Route, NavLink, useNavigate, useLocation } from 'react-router-dom'
+import { Routes, Route, NavLink, Navigate, useNavigate, useLocation } from 'react-router-dom'
 import { useApi } from './hooks/useApi'
 import { useAuth } from './hooks/useAuth'
 import ErrorBoundary from './components/ErrorBoundary'
@@ -37,8 +37,8 @@ const ExportView = lazy(() => import('./views/ExportView'))
 const AccesosView = lazy(() => import('./views/AccesosView'))
 
 const tabs = [
-  { path: '/', label: 'Bandeja', icon: Inbox },
   { path: '/predio', label: 'Predio', icon: Info },
+  { path: '/bandeja', label: 'Bandeja', icon: Inbox },
   { path: '/campo', label: 'Vista campo', icon: LayoutDashboard },
   { path: '/nodo', label: 'Nodo detalle', icon: Radio },
   { path: '/firma', label: 'Firma hídrica', icon: Droplets },
@@ -336,7 +336,8 @@ export default function App() {
             <ErrorBoundary>
             <Suspense fallback={<Loading />}>
             <Routes>
-              <Route path="/" element={<BandejaView predioId={predioId} />} />
+              <Route path="/" element={<Navigate to="/predio" replace />} />
+              <Route path="/bandeja" element={<BandejaView predioId={predioId} />} />
               <Route path="/campo" element={<OverviewView predioId={predioId} />} />
               <Route path="/predio" element={<PredioView predioId={predioId} onChangePredio={setPredioId} predios={predios} user={user} />} />
               <Route path="/nodo" element={<NodoView predioId={predioId} />} />

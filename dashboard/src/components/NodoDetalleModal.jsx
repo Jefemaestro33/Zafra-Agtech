@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import {
   Send, Loader2, ShieldAlert, Droplets, WifiOff, BatteryWarning, BrainCircuit,
-  Sparkles, MessageCircle, AlertCircle, Activity,
+  Sparkles, MessageCircle, AlertCircle, Activity, MessageSquareText, X as XIcon,
+  CheckCircle2, XCircle,
 } from 'lucide-react'
 import Modal from './Modal'
 import Tabs from './Tabs'
@@ -146,6 +147,57 @@ function BubbleTratamiento({ item }) {
   )
 }
 
+function BubbleWhatsapp({ item }) {
+  const dest = item.destino === 'productor' ? 'al productor'
+    : item.destino === 'agronomo' ? 'al agrónomo'
+    : item.destino === 'manual' ? 'manual'
+    : 'al equipo'
+  return (
+    <div className="flex gap-2 max-w-[88%]">
+      <div
+        className="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
+        style={{
+          background: 'rgba(37,211,102,0.12)',
+          border: '1px solid rgba(37,211,102,0.3)',
+          color: '#25d366',
+        }}
+      >
+        <MessageSquareText size={14} />
+      </div>
+      <div
+        className="rounded-2xl rounded-tl-sm px-3.5 py-2.5 text-[13px] flex-1"
+        style={{
+          background: 'rgba(37,211,102,0.06)',
+          border: `1px solid ${item.success ? 'rgba(37,211,102,0.2)' : 'rgba(239,68,68,0.3)'}`,
+          color: 'var(--color-text-primary)',
+        }}
+      >
+        <div className="flex items-center gap-2 mb-1">
+          <span className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: '#25d366' }}>
+            WhatsApp {dest}
+          </span>
+          {item.success
+            ? <CheckCircle2 size={10} style={{ color: 'var(--color-accent-green)' }} />
+            : <XCircle size={10} style={{ color: 'var(--color-accent-red)' }} />
+          }
+          {item.telefono && (
+            <span className="text-[10px] font-mono" style={{ color: 'var(--color-text-muted)' }}>
+              ···{item.telefono.slice(-4)}
+            </span>
+          )}
+          <span className="text-[10px]" style={{ color: 'var(--color-text-muted)' }}>· {timeAgo(item.ts)}</span>
+        </div>
+        <p className="whitespace-pre-wrap leading-snug" style={{ color: 'var(--color-text-secondary)' }}>{item.contenido}</p>
+        {!item.success && item.error_msg && (
+          <p className="mt-1 text-[11px] font-mono" style={{ color: 'var(--color-accent-red)' }}>
+            {item.error_msg}
+          </p>
+        )}
+      </div>
+    </div>
+  )
+}
+
 function BubbleNota({ item, miNombre }) {
   const esMia = item.autor === miNombre
   const pending = item._pending
@@ -185,11 +237,17 @@ function BubbleNota({ item, miNombre }) {
   )
 }
 
-function ConversacionTab({ nodoId, miNombre }) {
+function ConversacionTab({ nodo, miNombre }) {
+  const nodoId = nodo.nodo_id
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
   const [reply, setReply] = useState('')
   const [sending, setSending] = useState(false)
+  const [waOpen, setWaOpen] = useState(false)
+  const [waText, setWaText] = useState('')
+  const [waDestino, setWaDestino] = useState('productor')
+  const [waSending, setWaSending] = useState(false)
+  const [waMsg, setWaMsg] = useState(null)
   const scrollRef = useRef(null)
 
   const cargar = useCallback(async (silent = false) => {
@@ -241,6 +299,30 @@ function ConversacionTab({ nodoId, miNombre }) {
     }
   }
 
+  const enviarWhatsapp = async () => {
+    const mensaje = waText.trim()
+    if (!mensaje) return
+    setWaSending(true)
+    setWaMsg(null)
+    try {
+      const r = await apiFetch('/api/wa/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mensaje, destino: waDestino, nodo_id: nodoId }),
+      })
+      setWaText('')
+      setWaOpen(false)
+      setWaMsg({ ok: true, text: r.enviado ? 'Mensaje enviado por WhatsApp.' : 'Guardado. WhatsApp no está configurado en el servidor — el mensaje quedó en el log.' })
+      // Refresh timeline to show the new whatsapp bubble
+      cargar(true)
+      setTimeout(() => setWaMsg(null), 5000)
+    } catch (e) {
+      setWaMsg({ ok: false, text: e.message || 'Error al enviar' })
+    } finally {
+      setWaSending(false)
+    }
+  }
+
   return (
     <div className="flex flex-col h-[60vh]">
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
@@ -258,9 +340,94 @@ function ConversacionTab({ nodoId, miNombre }) {
         {items.map(item => {
           if (item.kind === 'evento') return <BubbleEvento key={item.id} item={item} />
           if (item.kind === 'tratamiento') return <BubbleTratamiento key={item.id} item={item} />
+          if (item.kind === 'whatsapp') return <BubbleWhatsapp key={item.id} item={item} />
           return <BubbleNota key={item.id} item={item} miNombre={miNombre} />
         })}
       </div>
+
+      {/* Toast de feedback de WhatsApp */}
+      {waMsg && (
+        <div
+          className="px-4 py-2 text-[12px]"
+          style={{
+            background: waMsg.ok ? 'rgba(16,185,129,0.08)' : 'rgba(239,68,68,0.08)',
+            color: waMsg.ok ? 'var(--color-accent-green)' : 'var(--color-accent-red)',
+            borderTop: `1px solid ${waMsg.ok ? 'rgba(16,185,129,0.2)' : 'rgba(239,68,68,0.2)'}`,
+          }}
+        >
+          {waMsg.text}
+        </div>
+      )}
+
+      {/* Input de WhatsApp manual (panel desplegable) */}
+      {waOpen && (
+        <div
+          className="px-4 py-3 space-y-2"
+          style={{ borderTop: '1px solid var(--color-border)', background: 'rgba(37,211,102,0.05)' }}
+        >
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: '#25d366' }}>
+              <MessageSquareText size={12} className="inline-block mr-1" />
+              Enviar por WhatsApp
+            </span>
+            <select
+              value={waDestino}
+              onChange={(e) => setWaDestino(e.target.value)}
+              className="text-[11px] px-2 py-1 rounded-md outline-none"
+              style={{
+                background: 'var(--color-surface-2)',
+                border: '1px solid var(--color-border)',
+                color: 'var(--color-text-primary)',
+              }}
+            >
+              <option value="productor">Al productor</option>
+              <option value="agronomo">Al agrónomo</option>
+              <option value="equipo">A todo el equipo</option>
+            </select>
+            <button
+              onClick={() => setWaOpen(false)}
+              className="p-1 rounded hover-surface"
+              style={{ color: 'var(--color-text-muted)' }}
+            >
+              <XIcon size={14} />
+            </button>
+          </div>
+          <textarea
+            value={waText}
+            onChange={(e) => setWaText(e.target.value)}
+            disabled={waSending}
+            rows={3}
+            placeholder={`Mensaje para ${waDestino}... Se firma automáticamente con tu nombre.`}
+            className="w-full px-3 py-2 rounded-lg text-sm outline-none resize-none"
+            style={{
+              background: 'var(--color-surface-2)',
+              border: '1px solid var(--color-border)',
+              color: 'var(--color-text-primary)',
+            }}
+          />
+          <div className="flex justify-between items-center">
+            <span className="text-[10px]" style={{ color: 'var(--color-text-muted)' }}>
+              {waText.length}/4096 · El mensaje queda en el log y aparece en la conversación.
+            </span>
+            <button
+              onClick={enviarWhatsapp}
+              disabled={waSending || !waText.trim()}
+              className="px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-2 transition-colors"
+              style={{
+                background: waText.trim() ? '#25d366' : 'var(--color-surface-3)',
+                color: waText.trim() ? '#fff' : 'var(--color-text-muted)',
+                opacity: waSending ? 0.6 : 1,
+                cursor: waSending || !waText.trim() ? 'not-allowed' : 'pointer',
+              }}
+            >
+              {waSending ? <Loader2 size={12} className="animate-spin" /> : <Send size={12} />}
+              Enviar WhatsApp
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Input de nota interna */}
       <div className="px-4 py-3" style={{ borderTop: '1px solid var(--color-border)' }}>
         <div className="flex gap-2">
           <input
@@ -277,6 +444,18 @@ function ConversacionTab({ nodoId, miNombre }) {
             }}
           />
           <button
+            onClick={() => setWaOpen(o => !o)}
+            className="px-3 py-2 rounded-xl text-sm transition-colors"
+            style={{
+              background: waOpen ? 'rgba(37,211,102,0.15)' : 'var(--color-surface-2)',
+              color: waOpen ? '#25d366' : 'var(--color-text-muted)',
+              border: `1px solid ${waOpen ? 'rgba(37,211,102,0.3)' : 'var(--color-border)'}`,
+            }}
+            title="Enviar por WhatsApp al productor o agrónomo"
+          >
+            <MessageSquareText size={14} />
+          </button>
+          <button
             onClick={enviar}
             disabled={sending || !reply.trim()}
             className="px-3.5 py-2 rounded-xl text-sm font-medium flex items-center gap-2 transition-colors"
@@ -292,7 +471,7 @@ function ConversacionTab({ nodoId, miNombre }) {
           </button>
         </div>
         <p className="text-[10px] mt-1.5" style={{ color: 'var(--color-text-muted)' }}>
-          Las notas quedan visibles para todo el equipo en este nodo.
+          Las notas quedan visibles para todo el equipo. El botón verde envía por WhatsApp.
         </p>
       </div>
     </div>
@@ -475,7 +654,7 @@ export default function NodoDetalleModal({ nodo, open, onClose }) {
           { key: 'notas', label: 'Notas' },
         ]}
       />
-      {tab === 'conversacion' && <ConversacionTab nodoId={nodo.nodo_id} miNombre={miNombre} />}
+      {tab === 'conversacion' && <ConversacionTab nodo={nodo} miNombre={miNombre} />}
       {tab === 'datos' && <DatosTab nodo={nodo} />}
       {tab === 'notas' && <NotasTab nodoId={nodo.nodo_id} miNombre={miNombre} />}
     </Modal>

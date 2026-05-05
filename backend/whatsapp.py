@@ -38,20 +38,38 @@ def _is_configured():
     return bool(TOKEN and PHONE_ID)
 
 
-def enviar_mensaje(telefono, mensaje):
+def _log_wa(telefono, destino, nodo_id, predio_id, mensaje, success, error_msg=None):
+    """Best-effort: guardar cada envío de WhatsApp en wa_outbox. Nunca rompe el flujo."""
+    try:
+        from db import execute
+        execute(
+            """
+            INSERT INTO wa_outbox (telefono, destino, nodo_id, predio_id, mensaje, success, error_msg)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
+            """,
+            ((telefono or "")[:32], (destino or "")[:32], nodo_id, predio_id, mensaje, success, (error_msg or None)),
+        )
+    except Exception as e:
+        log.warning(f"wa_outbox insert failed: {e}")
+
+
+def enviar_mensaje(telefono, mensaje, *, nodo_id=None, predio_id=None, destino=None):
     """
     Envía mensaje de texto por WhatsApp Business Cloud API.
+    Loggea cada intento (éxito o falla) en wa_outbox.
     Retorna True si se envió, False si falló o no está configurado.
     """
     if not _is_configured():
         log.warning("WhatsApp no configurado (faltan WHATSAPP_TOKEN / WHATSAPP_PHONE_ID)")
         log.info(f"Mensaje que se habría enviado a {telefono[-4:] if telefono else '????'}:\n{mensaje[:200]}")
+        _log_wa(telefono, destino, nodo_id, predio_id, mensaje, success=False, error_msg="not configured")
         return False
 
     try:
         import httpx
     except ImportError:
         log.error("httpx no instalado. pip install httpx")
+        _log_wa(telefono, destino, nodo_id, predio_id, mensaje, success=False, error_msg="httpx not installed")
         return False
 
     try:
@@ -72,36 +90,40 @@ def enviar_mensaje(telefono, mensaje):
 
         if response.status_code == 200:
             log.info(f"WhatsApp enviado a ...{telefono[-4:]}")
+            _log_wa(telefono, destino, nodo_id, predio_id, mensaje, success=True)
             return True
         else:
-            log.error(f"WhatsApp falló: {response.status_code} {response.text[:300]}")
+            err = f"HTTP {response.status_code}: {response.text[:300]}"
+            log.error(f"WhatsApp falló: {err}")
+            _log_wa(telefono, destino, nodo_id, predio_id, mensaje, success=False, error_msg=err)
             return False
 
     except Exception as e:
         log.error(f"Error enviando WhatsApp: {e}")
+        _log_wa(telefono, destino, nodo_id, predio_id, mensaje, success=False, error_msg=str(e)[:300])
         return False
 
 
-def enviar_a_agronomo(mensaje):
+def enviar_a_agronomo(mensaje, *, nodo_id=None, predio_id=None):
     """Envía mensaje al agrónomo."""
     if not AGRONOMO_PHONE:
         log.warning("AGRONOMO_PHONE no configurado")
         return False
-    return enviar_mensaje(AGRONOMO_PHONE, mensaje)
+    return enviar_mensaje(AGRONOMO_PHONE, mensaje, nodo_id=nodo_id, predio_id=predio_id, destino="agronomo")
 
 
-def enviar_a_productor(mensaje):
+def enviar_a_productor(mensaje, *, nodo_id=None, predio_id=None):
     """Envía mensaje al productor."""
     if not PRODUCTOR_PHONE:
         log.warning("PRODUCTOR_PHONE no configurado")
         return False
-    return enviar_mensaje(PRODUCTOR_PHONE, mensaje)
+    return enviar_mensaje(PRODUCTOR_PHONE, mensaje, nodo_id=nodo_id, predio_id=predio_id, destino="productor")
 
 
-def enviar_a_equipo(mensaje):
+def enviar_a_equipo(mensaje, *, nodo_id=None, predio_id=None):
     """Envía mensaje al agrónomo y al productor."""
-    r1 = enviar_a_agronomo(mensaje)
-    r2 = enviar_a_productor(mensaje)
+    r1 = enviar_a_agronomo(mensaje, nodo_id=nodo_id, predio_id=predio_id)
+    r2 = enviar_a_productor(mensaje, nodo_id=nodo_id, predio_id=predio_id)
     return r1 or r2
 
 
@@ -129,7 +151,7 @@ def cronjob_alerta_diaria(predio_id=1):
         log.info(f"Mensaje:\n{mensaje}")
 
         # Enviar al equipo
-        enviar_a_equipo(mensaje)
+        enviar_a_equipo(mensaje, predio_id=predio_id)
 
         # Guardar en historial
         try:
@@ -202,7 +224,7 @@ def cronjob_alertas_criticas(predio_id=1):
             mensaje = "\n".join(lineas)
 
             log.info(f"Alertas críticas: {len(alertas_criticas)}")
-            enviar_a_agronomo(mensaje)
+            enviar_a_agronomo(mensaje, predio_id=predio_id)
         else:
             log.info("Sin alertas críticas")
 
@@ -227,7 +249,7 @@ def cronjob_reporte_semanal(predio_id=1):
         from llm_consultor import generar_reporte_agricultor
         reporte = generar_reporte_agricultor(conn, predio_id)
         log.info(f"Reporte semanal generado ({len(reporte)} chars)")
-        enviar_a_equipo(reporte)
+        enviar_a_equipo(reporte, predio_id=predio_id)
     finally:
         conn.close()
 
