@@ -84,8 +84,8 @@ function nodoIcon({ severity, nombre, online }) {
   return L.divIcon({
     className: 'zafra-node-icon',
     html,
-    iconSize: [120, 36],
-    iconAnchor: [60, 8],
+    iconSize: [120, 40],
+    iconAnchor: [60, 9],   // centro exacto del dot (14px alto + 2*2 border = 18px → centro y=9)
     popupAnchor: [0, -10],
   })
 }

@@ -506,8 +506,40 @@ export default function AdminMapaView({ predioId }) {
                         </span>
                       </td>
                       <td className="px-5 py-3" style={{ color: 'var(--color-text-secondary)' }}>{n.bloque}</td>
-                      <td className="px-5 py-3 font-mono text-[12px]" style={{ color: changed ? 'var(--color-accent-amber)' : 'var(--color-text-secondary)' }}>{coords?.lat?.toFixed(6) || '—'}</td>
-                      <td className="px-5 py-3 font-mono text-[12px]" style={{ color: changed ? 'var(--color-accent-amber)' : 'var(--color-text-secondary)' }}>{coords?.lon?.toFixed(6) || '—'}</td>
+                      <td className="px-3 py-2">
+                        <input
+                          type="number"
+                          step="0.000001"
+                          value={coords?.lat ?? ''}
+                          onChange={e => {
+                            const v = e.target.value === '' ? null : parseFloat(e.target.value)
+                            setDrafts(prev => ({ ...prev, [n.nodo_id]: { ...prev[n.nodo_id], lat: v } }))
+                          }}
+                          className="w-32 px-2 py-1 rounded-md font-mono text-[12px] outline-none focus:ring-1"
+                          style={{
+                            background: 'var(--color-surface-3)',
+                            border: `1px solid ${changed ? 'var(--color-accent-amber)' : 'var(--color-border)'}`,
+                            color: changed ? 'var(--color-accent-amber)' : 'var(--color-text-primary)',
+                          }}
+                        />
+                      </td>
+                      <td className="px-3 py-2">
+                        <input
+                          type="number"
+                          step="0.000001"
+                          value={coords?.lon ?? ''}
+                          onChange={e => {
+                            const v = e.target.value === '' ? null : parseFloat(e.target.value)
+                            setDrafts(prev => ({ ...prev, [n.nodo_id]: { ...prev[n.nodo_id], lon: v } }))
+                          }}
+                          className="w-32 px-2 py-1 rounded-md font-mono text-[12px] outline-none focus:ring-1"
+                          style={{
+                            background: 'var(--color-surface-3)',
+                            border: `1px solid ${changed ? 'var(--color-accent-amber)' : 'var(--color-border)'}`,
+                            color: changed ? 'var(--color-accent-amber)' : 'var(--color-text-primary)',
+                          }}
+                        />
+                      </td>
                       <td className="px-5 py-3">
                         {changed && (
                           <button onClick={() => handleSaveNodo(n.nodo_id)} disabled={saving === n.nodo_id}
