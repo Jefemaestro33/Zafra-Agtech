@@ -10,12 +10,13 @@ import {
   Bell, Leaf, Menu, X, ChevronsLeft, ChevronsRight, Info, Star, Trash2,
   MessageCircleQuestion, Users, UserCog, History, Download, Receipt, DollarSign,
   Settings, BellRing, Plug, DatabaseBackup, BookOpen, LogOut, ChevronUp, PlusCircle, FilePenLine, MapPinned,
-  Shield, Inbox, Loader2,
+  Shield, Inbox, Calendar, Loader2,
 } from 'lucide-react'
 import Loading from './components/Loading'
 
 // Lazy-loaded views for code splitting
 const BandejaView = lazy(() => import('./views/BandejaView'))
+const CalendarioView = lazy(() => import('./views/CalendarioView'))
 const OverviewView = lazy(() => import('./views/OverviewView'))
 const NodoView = lazy(() => import('./views/NodoView'))
 const FirmaView = lazy(() => import('./views/FirmaView'))
@@ -39,6 +40,7 @@ const AccesosView = lazy(() => import('./views/AccesosView'))
 const tabs = [
   { path: '/predio', label: 'Predio', icon: Info },
   { path: '/bandeja', label: 'Bandeja', icon: Inbox },
+  { path: '/calendario', label: 'Calendario', icon: Calendar },
   { path: '/campo', label: 'Vista campo', icon: LayoutDashboard },
   { path: '/nodo', label: 'Nodo detalle', icon: Radio },
   { path: '/firma', label: 'Firma hídrica', icon: Droplets },
@@ -338,6 +340,7 @@ export default function App() {
             <Routes>
               <Route path="/" element={<Navigate to="/predio" replace />} />
               <Route path="/bandeja" element={<BandejaView predioId={predioId} />} />
+              <Route path="/calendario" element={<CalendarioView predioId={predioId} />} />
               <Route path="/campo" element={<OverviewView predioId={predioId} />} />
               <Route path="/predio" element={<PredioView predioId={predioId} onChangePredio={setPredioId} predios={predios} user={user} />} />
               <Route path="/nodo" element={<NodoView predioId={predioId} />} />

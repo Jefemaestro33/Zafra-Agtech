@@ -155,6 +155,34 @@ class WhatsAppPreviewRequest(BaseModel):
     predio_id: int = 1
 
 
+class EventoCalendarioCreate(BaseModel):
+    titulo: str
+    tipo: Optional[str] = None
+    fecha: str  # YYYY-MM-DD
+    hora: Optional[str] = None  # HH:MM
+    duracion_min: Optional[int] = None
+    predio_id: Optional[int] = None
+    nodo_id: Optional[int] = None
+    responsable: Optional[str] = None
+    estado: str = "programado"  # programado | completado | cancelado
+    descripcion: Optional[str] = None
+    recordatorio_wa: bool = False
+
+
+class EventoCalendarioUpdate(BaseModel):
+    titulo: Optional[str] = None
+    tipo: Optional[str] = None
+    fecha: Optional[str] = None
+    hora: Optional[str] = None
+    duracion_min: Optional[int] = None
+    predio_id: Optional[int] = None
+    nodo_id: Optional[int] = None
+    responsable: Optional[str] = None
+    estado: Optional[str] = None
+    descripcion: Optional[str] = None
+    recordatorio_wa: Optional[bool] = None
+
+
 class MicrobiomaCreate(BaseModel):
     nodo_id: int
     profundidad: int = 15
@@ -328,10 +356,42 @@ def _init_wa_outbox_table():
         logging.warning(f"wa_outbox table init failed: {e}")
 
 
+def _init_calendario_table():
+    """Idempotent: agenda de citas, instalaciones, mantenimientos, aplicaciones, etc."""
+    if not DATABASE_URL:
+        return
+    try:
+        execute("""
+            CREATE TABLE IF NOT EXISTS eventos_calendario (
+                id              SERIAL PRIMARY KEY,
+                titulo          VARCHAR(200) NOT NULL,
+                tipo            VARCHAR(40),
+                fecha           DATE NOT NULL,
+                hora            TIME,
+                duracion_min    INT,
+                predio_id       INT,
+                nodo_id         INT,
+                responsable     VARCHAR(100),
+                estado          VARCHAR(20) NOT NULL DEFAULT 'programado',
+                descripcion     TEXT,
+                recordatorio_wa BOOLEAN NOT NULL DEFAULT FALSE,
+                creado_por      VARCHAR(64),
+                creado_en       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                actualizado_en  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            )
+        """)
+        execute("CREATE INDEX IF NOT EXISTS idx_calendario_fecha ON eventos_calendario (fecha)")
+        execute("CREATE INDEX IF NOT EXISTS idx_calendario_predio_fecha ON eventos_calendario (predio_id, fecha)")
+    except Exception as e:
+        import logging
+        logging.warning(f"eventos_calendario table init failed: {e}")
+
+
 _init_auth_logs_table()
 _init_notas_nodo_table()
 _init_wa_outbox_table()
 _init_wa_inbox_table()
+_init_calendario_table()
 
 
 @app.post("/api/auth/login")
@@ -719,6 +779,103 @@ def clear_demo_chat():
     """Borra solo los mensajes marcados como is_demo. Para limpiar antes del piloto real."""
     execute("DELETE FROM wa_outbox WHERE is_demo = TRUE")
     execute("DELETE FROM wa_inbox WHERE is_demo = TRUE")
+    return {"status": "ok"}
+
+
+# ============================================================
+# CALENDARIO — citas, instalaciones, mantenimientos, aplicaciones
+# ============================================================
+@app.get("/api/calendario", dependencies=[Depends(verificar_token)])
+def listar_eventos_calendario(
+    predio_id: Optional[int] = Query(None),
+    desde: Optional[str] = Query(None, description="YYYY-MM-DD"),
+    hasta: Optional[str] = Query(None, description="YYYY-MM-DD"),
+    limit: int = Query(500, ge=1, le=2000),
+):
+    where = []
+    params: list = []
+    if predio_id is not None:
+        where.append("predio_id = %s"); params.append(predio_id)
+    if desde:
+        where.append("fecha >= %s"); params.append(desde)
+    if hasta:
+        where.append("fecha <= %s"); params.append(hasta)
+    where_sql = (" WHERE " + " AND ".join(where)) if where else ""
+    params.append(limit)
+    rows = query(
+        f"SELECT id, titulo, tipo, fecha, hora, duracion_min, predio_id, nodo_id, "
+        f"responsable, estado, descripcion, recordatorio_wa, creado_por, "
+        f"creado_en, actualizado_en "
+        f"FROM eventos_calendario{where_sql} ORDER BY fecha ASC, hora ASC NULLS LAST LIMIT %s",
+        tuple(params),
+    )
+    return serialize(rows)
+
+
+@app.post("/api/calendario")
+def crear_evento_calendario(body: EventoCalendarioCreate, user: dict = Depends(require_writer)):
+    titulo = (body.titulo or "").strip()
+    if not titulo:
+        raise HTTPException(400, "Título vacío")
+    autor = (user.get("nombre") or user.get("usuario") or "?")[:64]
+    row = query(
+        """
+        INSERT INTO eventos_calendario
+            (titulo, tipo, fecha, hora, duracion_min, predio_id, nodo_id,
+             responsable, estado, descripcion, recordatorio_wa, creado_por)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        RETURNING id, titulo, tipo, fecha, hora, duracion_min, predio_id, nodo_id,
+                  responsable, estado, descripcion, recordatorio_wa, creado_por,
+                  creado_en, actualizado_en
+        """,
+        (
+            titulo[:200], (body.tipo or None),
+            body.fecha, body.hora or None, body.duracion_min,
+            body.predio_id, body.nodo_id,
+            (body.responsable or None) and body.responsable[:100],
+            (body.estado or "programado")[:20],
+            (body.descripcion or None),
+            bool(body.recordatorio_wa),
+            autor,
+        ),
+        one=True,
+    )
+    return serialize(row)
+
+
+@app.put("/api/calendario/{evento_id}")
+def actualizar_evento_calendario(evento_id: int, body: EventoCalendarioUpdate, _user: dict = Depends(require_writer)):
+    existing = query("SELECT id FROM eventos_calendario WHERE id = %s", (evento_id,), one=True)
+    if not existing:
+        raise HTTPException(404, "Evento no encontrado")
+    fields = []
+    params: list = []
+    for col in [
+        "titulo", "tipo", "fecha", "hora", "duracion_min", "predio_id",
+        "nodo_id", "responsable", "estado", "descripcion", "recordatorio_wa",
+    ]:
+        v = getattr(body, col)
+        if v is not None:
+            fields.append(f"{col} = %s")
+            params.append(v)
+    if not fields:
+        return {"status": "no_changes"}
+    fields.append("actualizado_en = NOW()")
+    params.append(evento_id)
+    row = query(
+        f"UPDATE eventos_calendario SET {', '.join(fields)} WHERE id = %s "
+        f"RETURNING id, titulo, tipo, fecha, hora, duracion_min, predio_id, nodo_id, "
+        f"responsable, estado, descripcion, recordatorio_wa, creado_por, "
+        f"creado_en, actualizado_en",
+        tuple(params),
+        one=True,
+    )
+    return serialize(row)
+
+
+@app.delete("/api/calendario/{evento_id}", dependencies=[Depends(require_writer)])
+def borrar_evento_calendario(evento_id: int):
+    execute("DELETE FROM eventos_calendario WHERE id = %s", (evento_id,))
     return {"status": "ok"}
 
 
