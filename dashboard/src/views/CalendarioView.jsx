@@ -213,7 +213,7 @@ export default function CalendarioView({ predioId }) {
       </div>
 
       {/* Grid layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-4">
+      <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_260px] gap-4">
         {/* Calendario */}
         <div className="rounded-2xl overflow-hidden" style={{ background: 'var(--color-surface-1)', border: '1px solid var(--color-border)' }}>
           <div className="flex items-center justify-between px-4 py-3" style={{ borderBottom: '1px solid var(--color-border)' }}>
@@ -246,7 +246,7 @@ export default function CalendarioView({ predioId }) {
             ))}
           </div>
 
-          <div className="grid grid-cols-7 gap-1 p-2">
+          <div className="grid grid-cols-7 gap-1.5 p-3" style={{ gridAutoRows: 'minmax(130px, 1fr)' }}>
             {cells.map((d, i) => {
               if (d === null) return <div key={i} />
               const dateStr = `${cursor.y}-${String(cursor.m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`
@@ -257,67 +257,58 @@ export default function CalendarioView({ predioId }) {
                 <div
                   key={i}
                   onClick={() => setDiaExpandido(isExp ? null : dateStr)}
-                  className="min-h-[80px] p-1.5 rounded-lg text-xs transition-colors cursor-pointer"
+                  className="p-2 rounded-lg text-xs transition-colors cursor-pointer flex flex-col min-w-0"
                   style={{
                     background: isToday ? 'var(--color-accent-green-dim)' : 'var(--color-surface-2)',
                     border: `1px solid ${isToday ? 'rgba(16,185,129,0.4)' : isExp ? 'var(--color-accent-green-dim)' : 'var(--color-border)'}`,
                   }}
                 >
-                  <div className="flex items-center justify-between mb-1">
+                  <div className="flex items-center justify-between mb-1.5">
                     <span
-                      className="text-[11px] font-semibold"
+                      className="text-sm font-semibold"
                       style={{ color: isToday ? 'var(--color-accent-green)' : 'var(--color-text-secondary)' }}
                     >
                       {d}
                     </span>
-                    {items.length > 0 && (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          setEditando({ isNew: true, item: { fecha: dateStr, estado: 'programado', tipo: 'cita', predio_id: predioId } })
-                        }}
-                        className="p-0.5 rounded opacity-0 hover:opacity-100 group-hover:opacity-100"
-                        style={{ color: 'var(--color-text-muted)' }}
-                      >
-                        <Plus size={10} />
-                      </button>
-                    )}
-                  </div>
-                  {items.slice(0, 3).map(ev => {
-                    const meta = tipoMeta(ev.tipo)
-                    return (
-                      <div
-                        key={ev.id}
-                        onClick={(e) => { e.stopPropagation(); setEditando({ isNew: false, item: ev }) }}
-                        className="truncate flex items-center gap-1 mb-0.5 px-1 py-0.5 rounded"
-                        style={{
-                          background: `${meta.color}15`,
-                          color: ev.estado === 'cancelado' ? 'var(--color-text-muted)' : 'var(--color-text-primary)',
-                          textDecoration: ev.estado === 'cancelado' ? 'line-through' : 'none',
-                          opacity: ev.estado === 'cancelado' ? 0.6 : 1,
-                        }}
-                      >
-                        <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: meta.color }} />
-                        {ev.hora && <span className="text-[9px] font-mono opacity-70">{fmtHora(ev.hora)}</span>}
-                        <span className="truncate text-[10px]">{ev.titulo}</span>
-                      </div>
-                    )
-                  })}
-                  {items.length > 3 && (
-                    <div className="text-[10px]" style={{ color: 'var(--color-text-muted)' }}>+{items.length - 3} más</div>
-                  )}
-                  {items.length === 0 && diaExpandido === dateStr && (
                     <button
                       onClick={(e) => {
                         e.stopPropagation()
                         setEditando({ isNew: true, item: { fecha: dateStr, estado: 'programado', tipo: 'cita', predio_id: predioId } })
                       }}
-                      className="text-[10px] mt-1 flex items-center gap-1"
-                      style={{ color: 'var(--color-accent-green)' }}
+                      className="p-0.5 rounded transition-opacity"
+                      style={{ color: 'var(--color-text-muted)', opacity: items.length > 0 ? 0 : 0.4 }}
+                      title="Añadir evento"
+                      onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
+                      onMouseLeave={(e) => e.currentTarget.style.opacity = items.length > 0 ? '0' : '0.4'}
                     >
-                      <Plus size={9} /> Añadir aquí
+                      <Plus size={11} />
                     </button>
-                  )}
+                  </div>
+                  <div className="flex-1 space-y-0.5 overflow-hidden">
+                    {items.slice(0, 4).map(ev => {
+                      const meta = tipoMeta(ev.tipo)
+                      return (
+                        <div
+                          key={ev.id}
+                          onClick={(e) => { e.stopPropagation(); setEditando({ isNew: false, item: ev }) }}
+                          className="truncate flex items-center gap-1.5 px-1.5 py-1 rounded"
+                          style={{
+                            background: `${meta.color}18`,
+                            color: ev.estado === 'cancelado' ? 'var(--color-text-muted)' : 'var(--color-text-primary)',
+                            textDecoration: ev.estado === 'cancelado' ? 'line-through' : 'none',
+                            opacity: ev.estado === 'cancelado' ? 0.6 : 1,
+                          }}
+                        >
+                          <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: meta.color }} />
+                          {ev.hora && <span className="text-[10px] font-mono opacity-70 shrink-0">{fmtHora(ev.hora)}</span>}
+                          <span className="truncate text-[11px]">{ev.titulo}</span>
+                        </div>
+                      )
+                    })}
+                    {items.length > 4 && (
+                      <div className="text-[10px] px-1.5" style={{ color: 'var(--color-text-muted)' }}>+{items.length - 4} más</div>
+                    )}
+                  </div>
                 </div>
               )
             })}
