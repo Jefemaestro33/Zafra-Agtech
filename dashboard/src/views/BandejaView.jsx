@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect, useRef, useCallback } from 'react'
 import {
   Search, Inbox, RefreshCw, ChevronRight, Wifi, WifiOff,
   Send, MessageCircle, CheckCircle2, XCircle, Clock,
-  Loader2, Sparkles, ShieldAlert, FileText, Droplets,
+  Loader2, Sparkles, ShieldAlert, FileText, Droplets, Info,
 } from 'lucide-react'
 import { useApi, apiFetch } from '../hooks/useApi'
 import { narrate, severityRank } from '../lib/nodeNarrative'
@@ -337,6 +337,23 @@ function ChatSubtab({ predioId }) {
         minHeight: 480,
       }}
     >
+      {/* Banner de demo */}
+      {items && items.some(i => i.is_demo) && (
+        <div
+          className="flex items-start gap-2 px-4 py-2.5 text-[12px]"
+          style={{
+            background: 'rgba(245,158,11,0.08)',
+            color: 'var(--color-accent-amber)',
+            borderBottom: '1px solid rgba(245,158,11,0.25)',
+          }}
+        >
+          <Info size={13} className="shrink-0 mt-0.5" />
+          <span>
+            <strong>Conversación de demostración.</strong> Estos mensajes son un ejemplo del flujo real para mostrar cómo funciona la herramienta. Cuando WhatsApp Business esté conectado, las alertas que envíe el sistema y las respuestas del productor aparecerán aquí en vivo.
+          </span>
+        </div>
+      )}
+
       {/* Header */}
       <div
         className="flex items-center gap-2 px-4 py-2.5"

@@ -295,6 +295,8 @@ def _init_wa_inbox_table():
         """)
         execute("CREATE INDEX IF NOT EXISTS idx_wa_inbox_ts ON wa_inbox (ts DESC)")
         execute("CREATE INDEX IF NOT EXISTS idx_wa_inbox_predio_ts ON wa_inbox (predio_id, ts DESC)")
+        execute("ALTER TABLE wa_inbox ADD COLUMN IF NOT EXISTS is_demo BOOLEAN NOT NULL DEFAULT FALSE")
+        execute("ALTER TABLE wa_outbox ADD COLUMN IF NOT EXISTS is_demo BOOLEAN NOT NULL DEFAULT FALSE")
     except Exception as e:
         import logging
         logging.warning(f"wa_inbox table init failed: {e}")
@@ -450,12 +452,12 @@ def wa_conversacion(
     if nodo_id is not None:
         out_where.append("nodo_id = %s"); params_out.append(nodo_id)
         in_where.append("nodo_id = %s"); params_in.append(nodo_id)
-    out_sql = "SELECT id, ts, telefono, destino, mensaje, success, error_msg FROM wa_outbox"
+    out_sql = "SELECT id, ts, telefono, destino, mensaje, success, error_msg, is_demo FROM wa_outbox"
     if out_where: out_sql += " WHERE " + " AND ".join(out_where)
     out_sql += " ORDER BY ts DESC LIMIT %s"
     params_out.append(limit)
 
-    in_sql = "SELECT id, ts, telefono, origen, mensaje FROM wa_inbox"
+    in_sql = "SELECT id, ts, telefono, origen, mensaje, is_demo FROM wa_inbox"
     if in_where: in_sql += " WHERE " + " AND ".join(in_where)
     in_sql += " ORDER BY ts DESC LIMIT %s"
     params_in.append(limit)
@@ -477,6 +479,7 @@ def wa_conversacion(
             "mensaje": o["mensaje"],
             "success": o["success"],
             "error_msg": o["error_msg"],
+            "is_demo": o.get("is_demo", False),
         })
     for i in in_rows:
         items.append({
@@ -486,6 +489,7 @@ def wa_conversacion(
             "telefono": i["telefono"],
             "origen": i["origen"],
             "mensaje": i["mensaje"],
+            "is_demo": i.get("is_demo", False),
         })
     items.sort(key=lambda x: x["ts"])
     return serialize(items[-limit:])
@@ -619,6 +623,103 @@ async def wa_webhook_receive(request: Request):
         logging.warning(f"wa_webhook: error guardando mensajes: {e}")
     return {"status": "ok", "saved": saved}
 
+
+# ============================================================
+# DEMO SEED — conversación de ejemplo para mostrar a YC
+# ============================================================
+_DEMO_CHAT_SCRIPT = [
+    # (offset_minutes_ago, kind, payload)
+    (5760, "out", {  # 4 días atrás 09:00 — receta diaria
+        "destino": "productor", "telefono": "521AGRI", "success": True,
+        "mensaje": "Buenos días — Receta de riego de hoy:\n• Bloque norte: 18mm\n• Bloque sur: 22mm\n\nETo del día: 5.4mm. Humedad de suelo: cómoda en 4 zonas, baja en 2.\n\nSin alertas críticas.",
+    }),
+    (5430, "in", {  # 4 días atrás 14:30
+        "origen": "productor", "telefono": "521AGRI",
+        "mensaje": "Recibido, le digo a Salvador para que abra las válvulas a las 6",
+    }),
+    (4275, "out", {  # 3 días atrás 8:45
+        "destino": "productor", "telefono": "521AGRI", "success": True,
+        "mensaje": "Buenos días — Receta de hoy:\n• Bloque norte: 16mm\n• Bloque sur: 20mm\n\nETo: 5.2mm. Sin alertas críticas.",
+    }),
+    (3653, "in", {
+        "origen": "productor", "telefono": "521AGRI",
+        "mensaje": "Aquí lo cumplimos, gracias",
+    }),
+    (2865, "out", {  # 2 días atrás ~15:00 — alerta crítica Phytophthora
+        "destino": "productor", "telefono": "521AGRI", "success": True,
+        "mensaje": "⚠ Alerta — Bloque 3 (sensor 7)\n\nScore Phytophthora: 72/100 (RIESGO ALTO).\n\nEl suelo lleva 4 días con humedad alta (>45%) y la temperatura del subsuelo bajó a 18°C. Son las condiciones donde aparece la pudrición de raíz.\n\nRecomendación: aplicar fungicida cobre en próximas 24-48h en los 14 árboles del bloque 3.",
+    }),
+    (2832, "in", {
+        "origen": "productor", "telefono": "521AGRI",
+        "mensaje": "Tengo Ridomil del año pasado, ¿sirve?",
+    }),
+    (2826, "out", {  # respuesta manual del agrónomo, 6 min después
+        "destino": "productor", "telefono": "521AGRI", "success": True,
+        "mensaje": "Sí sirve. Dosis: 2g/L de agua, aplicar al ras del tronco, máximo 3L por árbol. Avísame cuando esté hecho.\n\n— enviado por Darell desde Zafra",
+    }),
+    (2664, "in", {  # 2 días atrás 18:30
+        "origen": "productor", "telefono": "521AGRI",
+        "mensaje": "Ya quedó. 14 árboles del bloque 3.",
+    }),
+    (1440, "out", {  # 1 día atrás 9:00
+        "destino": "productor", "telefono": "521AGRI", "success": True,
+        "mensaje": "Receta del día:\n• Bloque norte: 14mm\n• Bloque sur: 18mm\n\nETo bajó a 4.8mm por el cielo nublado.\n\nNodo Bloque 3 sigue monitoreado, score bajó a 58 (rango medio).",
+    }),
+    (1305, "in", {
+        "origen": "productor", "telefono": "521AGRI",
+        "mensaje": "Va, gracias",
+    }),
+    (180, "out", {  # 3h atrás — alerta riego
+        "destino": "productor", "telefono": "521AGRI", "success": True,
+        "mensaje": "⚠ Bloque 5 — humedad a 10cm en 19% (debajo del umbral 22%).\n\nLas raíces empiezan a secarse. Recomendación: regar hoy, 16mm. Si no es posible, monitorear mañana.",
+    }),
+    (12, "in", {
+        "origen": "productor", "telefono": "521AGRI",
+        "mensaje": "Voy ahora",
+    }),
+]
+
+
+@app.post("/api/admin/seed-demo-chat", dependencies=[Depends(require_admin)])
+def seed_demo_chat(predio_id: int = Query(1)):
+    """Inserta una conversación de ejemplo para mostrar el flujo a YC. Idempotente: solo inserta si aún no hay rows con is_demo=true."""
+    from datetime import datetime, timedelta, timezone
+    existing = query("SELECT COUNT(*) AS n FROM wa_outbox WHERE is_demo = TRUE", one=True)
+    if existing and existing.get("n", 0) > 0:
+        return {"status": "already_seeded", "outbox": existing["n"]}
+
+    now = datetime.now(timezone.utc)
+    inserted_out = 0
+    inserted_in = 0
+    for offset_min, kind, payload in _DEMO_CHAT_SCRIPT:
+        ts = now - timedelta(minutes=offset_min)
+        if kind == "out":
+            execute(
+                """
+                INSERT INTO wa_outbox (ts, telefono, destino, predio_id, mensaje, success, is_demo)
+                VALUES (%s, %s, %s, %s, %s, %s, TRUE)
+                """,
+                (ts, payload.get("telefono"), payload.get("destino"), predio_id, payload["mensaje"], payload.get("success", True)),
+            )
+            inserted_out += 1
+        else:
+            execute(
+                """
+                INSERT INTO wa_inbox (ts, telefono, origen, predio_id, mensaje, is_demo)
+                VALUES (%s, %s, %s, %s, %s, TRUE)
+                """,
+                (ts, payload.get("telefono"), payload.get("origen"), predio_id, payload["mensaje"]),
+            )
+            inserted_in += 1
+    return {"status": "ok", "outbox_inserted": inserted_out, "inbox_inserted": inserted_in}
+
+
+@app.delete("/api/admin/seed-demo-chat", dependencies=[Depends(require_admin)])
+def clear_demo_chat():
+    """Borra solo los mensajes marcados como is_demo. Para limpiar antes del piloto real."""
+    execute("DELETE FROM wa_outbox WHERE is_demo = TRUE")
+    execute("DELETE FROM wa_inbox WHERE is_demo = TRUE")
+    return {"status": "ok"}
 
 
 # ============================================================
