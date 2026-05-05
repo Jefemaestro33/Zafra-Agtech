@@ -150,6 +150,11 @@ class WhatsAppSendRequest(BaseModel):
     predio_id: Optional[int] = None
 
 
+class WhatsAppPreviewRequest(BaseModel):
+    tipo: str  # riego | alertas | reporte
+    predio_id: int = 1
+
+
 class MicrobiomaCreate(BaseModel):
     nodo_id: int
     profundidad: int = 15
@@ -270,6 +275,31 @@ def _init_notas_nodo_table():
         logging.warning(f"notas_nodo table init failed: {e}")
 
 
+def _init_wa_inbox_table():
+    """Idempotent: log de mensajes entrantes que el productor/agrónomo manda al bot."""
+    if not DATABASE_URL:
+        return
+    try:
+        execute("""
+            CREATE TABLE IF NOT EXISTS wa_inbox (
+                id        SERIAL PRIMARY KEY,
+                ts        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                telefono  VARCHAR(32),
+                origen    VARCHAR(32),
+                nodo_id   INT,
+                predio_id INT,
+                mensaje   TEXT NOT NULL,
+                leido     BOOLEAN NOT NULL DEFAULT FALSE,
+                raw       JSONB
+            )
+        """)
+        execute("CREATE INDEX IF NOT EXISTS idx_wa_inbox_ts ON wa_inbox (ts DESC)")
+        execute("CREATE INDEX IF NOT EXISTS idx_wa_inbox_predio_ts ON wa_inbox (predio_id, ts DESC)")
+    except Exception as e:
+        import logging
+        logging.warning(f"wa_inbox table init failed: {e}")
+
+
 def _init_wa_outbox_table():
     """Idempotent: log de cada WhatsApp que el sistema envía (al productor, agrónomo, manual)."""
     if not DATABASE_URL:
@@ -299,6 +329,7 @@ def _init_wa_outbox_table():
 _init_auth_logs_table()
 _init_notas_nodo_table()
 _init_wa_outbox_table()
+_init_wa_inbox_table()
 
 
 @app.post("/api/auth/login")
@@ -400,6 +431,193 @@ def wa_send_manual(req: WhatsAppSendRequest, user: dict = Depends(require_writer
     else:
         ok = enviar_a_productor(cuerpo, nodo_id=req.nodo_id, predio_id=req.predio_id)
     return {"status": "ok" if ok else "logged_only", "enviado": ok, "destino": destino}
+
+
+@app.get("/api/wa/conversacion", dependencies=[Depends(verificar_token)])
+def wa_conversacion(
+    predio_id: Optional[int] = Query(None),
+    nodo_id: Optional[int] = Query(None),
+    limit: int = Query(300, ge=1, le=1000),
+):
+    """Hilo unificado de conversación: outbox (lo que enviamos) + inbox (lo que el productor/agrónomo respondió). Ordenado ascendente para chat."""
+    out_where = []
+    in_where = []
+    params_out = []
+    params_in = []
+    if predio_id is not None:
+        out_where.append("predio_id = %s"); params_out.append(predio_id)
+        in_where.append("predio_id = %s"); params_in.append(predio_id)
+    if nodo_id is not None:
+        out_where.append("nodo_id = %s"); params_out.append(nodo_id)
+        in_where.append("nodo_id = %s"); params_in.append(nodo_id)
+    out_sql = "SELECT id, ts, telefono, destino, mensaje, success, error_msg FROM wa_outbox"
+    if out_where: out_sql += " WHERE " + " AND ".join(out_where)
+    out_sql += " ORDER BY ts DESC LIMIT %s"
+    params_out.append(limit)
+
+    in_sql = "SELECT id, ts, telefono, origen, mensaje FROM wa_inbox"
+    if in_where: in_sql += " WHERE " + " AND ".join(in_where)
+    in_sql += " ORDER BY ts DESC LIMIT %s"
+    params_in.append(limit)
+
+    out_rows = query(out_sql, tuple(params_out))
+    try:
+        in_rows = query(in_sql, tuple(params_in))
+    except Exception:
+        in_rows = []
+
+    items = []
+    for o in out_rows:
+        items.append({
+            "kind": "out",
+            "id": f"o{o['id']}",
+            "ts": o["ts"],
+            "telefono": o["telefono"],
+            "destino": o["destino"],
+            "mensaje": o["mensaje"],
+            "success": o["success"],
+            "error_msg": o["error_msg"],
+        })
+    for i in in_rows:
+        items.append({
+            "kind": "in",
+            "id": f"i{i['id']}",
+            "ts": i["ts"],
+            "telefono": i["telefono"],
+            "origen": i["origen"],
+            "mensaje": i["mensaje"],
+        })
+    items.sort(key=lambda x: x["ts"])
+    return serialize(items[-limit:])
+
+
+@app.post("/api/wa/preview")
+def wa_preview(req: WhatsAppPreviewRequest, _user: dict = Depends(require_writer)):
+    """Genera el texto que el sistema enviaría para una plantilla, sin mandarlo. Para precargar el input del chat."""
+    tipo = (req.tipo or "").lower()
+    predio_id = req.predio_id or 1
+    try:
+        if tipo in ("riego", "balance"):
+            from balance_hidrico import resumen_predio, generar_receta_predio_whatsapp
+            with get_conn() as conn:
+                resumen = resumen_predio(conn, predio_id)
+                mensaje = generar_receta_predio_whatsapp(resumen)
+            return {"mensaje": mensaje, "tipo": "riego"}
+
+        if tipo in ("alertas", "alertas_criticas", "criticas"):
+            from alertas import calcular_score_phytophthora
+            with get_conn() as conn:
+                nodos = query("SELECT * FROM nodos WHERE predio_id = %s ORDER BY nodo_id", (predio_id,))
+                lineas = []
+                for nodo in nodos:
+                    score, desglose = calcular_score_phytophthora(conn, nodo["nodo_id"])
+                    if score >= 51:
+                        lineas.append(f"  {nodo['nombre']}: score {score}/100 — {desglose.get('nivel','?')}")
+                if not lineas:
+                    return {"mensaje": "Sin alertas críticas en este momento. Todos los nodos están en niveles normales.", "tipo": "alertas"}
+                mensaje = f"Alerta — {len(lineas)} nodo(s) con riesgo:\n" + "\n".join(lineas) + "\n\nRevisa el dashboard para detalles."
+                return {"mensaje": mensaje, "tipo": "alertas"}
+
+        if tipo in ("reporte", "reporte_semanal", "semanal"):
+            from llm_consultor import generar_reporte_agricultor
+            with get_conn() as conn:
+                reporte = generar_reporte_agricultor(conn, predio_id)
+            return {"mensaje": reporte, "tipo": "reporte"}
+
+        raise HTTPException(400, f"Tipo desconocido: {tipo}. Usa riego | alertas | reporte.")
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(500, f"Error generando plantilla: {e}")
+
+
+# ============================================================
+# WHATSAPP WEBHOOK — recibe mensajes entrantes de Meta Cloud API
+# ============================================================
+@app.get("/api/wa/webhook")
+def wa_webhook_verify(
+    hub_mode: Optional[str] = Query(None, alias="hub.mode"),
+    hub_challenge: Optional[str] = Query(None, alias="hub.challenge"),
+    hub_verify_token: Optional[str] = Query(None, alias="hub.verify_token"),
+):
+    """Verificación inicial de Meta. Configurar WA_VERIFY_TOKEN en Railway y meta lo manda en el setup."""
+    expected = os.environ.get("WA_VERIFY_TOKEN", "")
+    if not expected:
+        raise HTTPException(503, "WA_VERIFY_TOKEN no configurado en el servidor")
+    if hub_mode == "subscribe" and hub_verify_token == expected:
+        try:
+            return int(hub_challenge) if hub_challenge else 0
+        except (TypeError, ValueError):
+            return hub_challenge or ""
+    raise HTTPException(403, "Verify token inválido")
+
+
+def _verify_meta_signature(raw_body: bytes, signature_header: Optional[str]) -> bool:
+    """Valida X-Hub-Signature-256 con APP_SECRET. Si APP_SECRET no está set, deja pasar (modo permisivo)."""
+    secret = os.environ.get("WA_APP_SECRET", "")
+    if not secret:
+        return True
+    if not signature_header or not signature_header.startswith("sha256="):
+        return False
+    import hmac, hashlib
+    expected = hmac.new(secret.encode(), raw_body, hashlib.sha256).hexdigest()
+    received = signature_header.split("=", 1)[1]
+    return hmac.compare_digest(expected, received)
+
+
+@app.post("/api/wa/webhook")
+async def wa_webhook_receive(request: Request):
+    """Recibe mensajes entrantes de WhatsApp. Sin auth — público con validación HMAC opcional."""
+    raw = await request.body()
+    sig = request.headers.get("x-hub-signature-256")
+    if not _verify_meta_signature(raw, sig):
+        raise HTTPException(403, "Firma inválida")
+
+    import json as _json
+    try:
+        payload = _json.loads(raw.decode() or "{}")
+    except Exception:
+        raise HTTPException(400, "JSON inválido")
+
+    productor_phone = os.environ.get("PRODUCTOR_PHONE", "")
+    agronomo_phone = os.environ.get("AGRONOMO_PHONE", "")
+
+    saved = 0
+    try:
+        for entry in payload.get("entry", []):
+            for change in entry.get("changes", []):
+                value = change.get("value", {}) or {}
+                for msg in value.get("messages", []) or []:
+                    if msg.get("type") != "text":
+                        continue
+                    telefono = msg.get("from") or ""
+                    body = (msg.get("text") or {}).get("body") or ""
+                    ts_unix = msg.get("timestamp")
+                    origen = "productor" if telefono and telefono == productor_phone else \
+                             "agronomo" if telefono and telefono == agronomo_phone else "otro"
+                    predio_id = 1 if origen in ("productor", "agronomo") else None
+
+                    if ts_unix:
+                        execute(
+                            """
+                            INSERT INTO wa_inbox (ts, telefono, origen, predio_id, mensaje, raw)
+                            VALUES (to_timestamp(%s), %s, %s, %s, %s, %s)
+                            """,
+                            (int(ts_unix), telefono[:32], origen, predio_id, body[:4096], _json.dumps(msg)),
+                        )
+                    else:
+                        execute(
+                            """
+                            INSERT INTO wa_inbox (telefono, origen, predio_id, mensaje, raw)
+                            VALUES (%s, %s, %s, %s, %s)
+                            """,
+                            (telefono[:32], origen, predio_id, body[:4096], _json.dumps(msg)),
+                        )
+                    saved += 1
+    except Exception as e:
+        import logging
+        logging.warning(f"wa_webhook: error guardando mensajes: {e}")
+    return {"status": "ok", "saved": saved}
 
 
 
