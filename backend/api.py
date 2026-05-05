@@ -387,11 +387,23 @@ def _init_calendario_table():
         logging.warning(f"eventos_calendario table init failed: {e}")
 
 
+def _init_predio_perimetro_column():
+    """Idempotent: agrega columna perimetro JSONB a predios para guardar el lindero del predio."""
+    if not DATABASE_URL:
+        return
+    try:
+        execute("ALTER TABLE predios ADD COLUMN IF NOT EXISTS perimetro JSONB")
+    except Exception as e:
+        import logging
+        logging.warning(f"predios.perimetro column init failed: {e}")
+
+
 _init_auth_logs_table()
 _init_notas_nodo_table()
 _init_wa_outbox_table()
 _init_wa_inbox_table()
 _init_calendario_table()
+_init_predio_perimetro_column()
 
 
 @app.post("/api/auth/login")
@@ -971,6 +983,34 @@ def actualizar_predio(predio_id: int, datos: dict):
         return {"ok": True, "updated": updates}
     except Exception as e:
         raise HTTPException(500, f"Error al actualizar: {e}")
+
+
+@app.put("/api/predios/{predio_id}/perimetro", dependencies=[Depends(require_writer)])
+def actualizar_perimetro_predio(predio_id: int, datos: dict):
+    """Guarda el lindero del predio como array de [lat, lon]. Mín 3 puntos. None para borrar."""
+    pts = datos.get("points")
+    if pts is None:
+        execute("UPDATE predios SET perimetro = NULL WHERE predio_id = %s", (predio_id,))
+        return {"ok": True, "points": 0}
+    if not isinstance(pts, list) or len(pts) < 3:
+        raise HTTPException(400, "Se requieren al menos 3 puntos")
+    cleaned = []
+    for pt in pts:
+        if not (isinstance(pt, (list, tuple)) and len(pt) == 2):
+            raise HTTPException(400, "Cada punto debe ser [lat, lon]")
+        try:
+            lat, lon = float(pt[0]), float(pt[1])
+        except (TypeError, ValueError):
+            raise HTTPException(400, "lat/lon deben ser numéricos")
+        if not (-90 <= lat <= 90) or not (-180 <= lon <= 180):
+            raise HTTPException(400, "lat/lon fuera de rango")
+        cleaned.append([lat, lon])
+    import json as _json
+    try:
+        execute("UPDATE predios SET perimetro = %s WHERE predio_id = %s", (_json.dumps(cleaned), predio_id))
+        return {"ok": True, "points": len(cleaned)}
+    except Exception as e:
+        raise HTTPException(500, f"Error al guardar perimetro: {e}")
 
 
 @app.get("/api/predios/{predio_id}/overview", dependencies=[Depends(verificar_token)])

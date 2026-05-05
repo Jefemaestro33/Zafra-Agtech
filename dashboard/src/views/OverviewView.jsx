@@ -10,33 +10,7 @@ import KpiCard from '../components/KpiCard'
 import ScoreBadge from '../components/ScoreBadge'
 import Loading from '../components/Loading'
 
-// ---------- Geometría: convex hull para perímetro del predio ----------
-function convexHull(points) {
-  if (points.length < 3) return points.slice()
-  const sorted = [...points].sort((a, b) => a[0] - b[0] || a[1] - b[1])
-  const cross = (O, A, B) => (A[0] - O[0]) * (B[1] - O[1]) - (A[1] - O[1]) * (B[0] - O[0])
-  const lower = []
-  for (const p of sorted) {
-    while (lower.length >= 2 && cross(lower[lower.length - 2], lower[lower.length - 1], p) <= 0) lower.pop()
-    lower.push(p)
-  }
-  const upper = []
-  for (let i = sorted.length - 1; i >= 0; i--) {
-    const p = sorted[i]
-    while (upper.length >= 2 && cross(upper[upper.length - 2], upper[upper.length - 1], p) <= 0) upper.pop()
-    upper.push(p)
-  }
-  upper.pop(); lower.pop()
-  return [...lower, ...upper]
-}
-
-function expandPolygon(points, factor) {
-  if (!points.length) return points
-  const cx = points.reduce((s, p) => s + p[0], 0) / points.length
-  const cy = points.reduce((s, p) => s + p[1], 0) / points.length
-  return points.map(p => [cx + (p[0] - cx) * factor, cy + (p[1] - cy) * factor])
-}
-
+// ---------- Geometría ----------
 function bboxOf(points) {
   if (!points.length) return null
   let n = points[0][0], s = n, w = points[0][1], e = w
@@ -131,20 +105,20 @@ export default function OverviewView({ predioId }) {
     return data.nodos.map(n => ({ ...n, _narrative: narrate(n) }))
   }, [data])
 
-  // Convex hull = perímetro del predio (a partir de nodos + shapes)
+  // Perímetro autoritativo del predio (guardado en backend desde /admin/mapa)
   const perimeter = useMemo(() => {
-    if (!data) return null
-    const allPoints = []
-    for (const n of data.nodos) {
-      if (n.lat != null && n.lon != null) allPoints.push([n.lat, n.lon])
-    }
-    for (const s of shapes.polygons || []) for (const p of s.points || []) allPoints.push(p)
-    for (const s of shapes.lines || []) for (const p of s.points || []) allPoints.push(p)
-    if (allPoints.length < 3) return null
-    return expandPolygon(convexHull(allPoints), 1.18)
-  }, [data, shapes])
+    const p = data?.predio?.perimetro
+    if (!Array.isArray(p) || p.length < 3) return null
+    return p
+  }, [data])
 
-  const mapBounds = useMemo(() => perimeter ? bboxOf(perimeter) : null, [perimeter])
+  // Bounds: prioriza perímetro guardado; si no hay, usa bbox de nodos (sin inflar)
+  const mapBounds = useMemo(() => {
+    if (perimeter) return bboxOf(perimeter)
+    if (!data) return null
+    const pts = data.nodos.filter(n => n.lat != null && n.lon != null).map(n => [n.lat, n.lon])
+    return pts.length >= 2 ? bboxOf(pts) : null
+  }, [data, perimeter])
 
   if (loading) return <Loading />
   if (!data) return null
@@ -245,7 +219,7 @@ export default function OverviewView({ predioId }) {
           >
             <TileLayer attribution={tile.attribution} url={tile.url} />
 
-            {/* Perímetro del predio — convex hull con borde grueso */}
+            {/* Lindero autoritativo del predio (cargado desde backend) */}
             {perimeter && (
               <Polygon
                 positions={perimeter}
@@ -254,8 +228,7 @@ export default function OverviewView({ predioId }) {
                   weight: 3,
                   opacity: 0.95,
                   fillColor: '#10b981',
-                  fillOpacity: 0.04,
-                  dashArray: '12 6',
+                  fillOpacity: 0.06,
                 }}
               />
             )}

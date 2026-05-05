@@ -55,10 +55,14 @@ export default function AdminMapaView({ predioId }) {
   const [drafts, setDrafts] = useState({})
 
   // Drawing mode
-  const [mode, setMode] = useState('nodos') // 'nodos' | 'polygon' | 'line'
+  const [mode, setMode] = useState('nodos') // 'nodos' | 'polygon' | 'line' | 'perimetro'
   const [shapes, setShapes] = useState({ polygons: [], lines: [] })
   const [drawingBlock, setDrawingBlock] = useState(null) // 1-4 or 'linea'
   const [currentPoints, setCurrentPoints] = useState([])
+
+  // Perímetro del predio (autoritativo, en backend)
+  const [perimetroDraft, setPerimetroDraft] = useState([])
+  const [savingPerimetro, setSavingPerimetro] = useState(false)
 
   useEffect(() => {
     if (data?.nodos) {
@@ -89,7 +93,39 @@ export default function AdminMapaView({ predioId }) {
       setDrafts(prev => ({ ...prev, [selectedNodo]: { lat: latlng.lat, lon: latlng.lng } }))
     } else if ((mode === 'polygon' || mode === 'line') && drawingBlock) {
       setCurrentPoints(prev => [...prev, [latlng.lat, latlng.lng]])
+    } else if (mode === 'perimetro') {
+      setPerimetroDraft(prev => [...prev, [latlng.lat, latlng.lng]])
     }
+  }
+
+  // ── Perímetro handlers ──
+  const handleSavePerimetro = async () => {
+    if (perimetroDraft.length < 3) return
+    setSavingPerimetro(true)
+    try {
+      const res = await fetch(`/api/predios/${predioId}/perimetro`, {
+        method: 'PUT', headers: authHeaders(), body: JSON.stringify({ points: perimetroDraft }),
+      })
+      if (!res.ok) throw new Error()
+      showToast('success', `Perímetro guardado (${perimetroDraft.length} puntos)`)
+      setPerimetroDraft([])
+      refetch()
+    } catch { showToast('error', 'Error al guardar perímetro') }
+    setSavingPerimetro(false)
+  }
+
+  const handleDeletePerimetro = async () => {
+    setSavingPerimetro(true)
+    try {
+      const res = await fetch(`/api/predios/${predioId}/perimetro`, {
+        method: 'PUT', headers: authHeaders(), body: JSON.stringify({ points: null }),
+      })
+      if (!res.ok) throw new Error()
+      showToast('success', 'Perímetro eliminado')
+      setPerimetroDraft([])
+      refetch()
+    } catch { showToast('error', 'Error al eliminar perímetro') }
+    setSavingPerimetro(false)
   }
 
   const handleSaveNodo = async (nodoId) => {
@@ -179,7 +215,9 @@ export default function AdminMapaView({ predioId }) {
   }
 
   const isDrawing = (mode === 'polygon' || mode === 'line') && drawingBlock
-  const isActive = (mode === 'nodos' && selectedNodo) || isDrawing
+  const isPerimetroActive = mode === 'perimetro'
+  const isActive = (mode === 'nodos' && selectedNodo) || isDrawing || isPerimetroActive
+  const perimetroExisting = Array.isArray(predio?.perimetro) ? predio.perimetro : null
 
   return (
     <div className="space-y-4">
@@ -200,6 +238,7 @@ export default function AdminMapaView({ predioId }) {
           <h2 className="text-lg font-bold" style={{ color: 'var(--color-text-primary)' }}>Posicionar nodos y dibujar cuadrantes</h2>
           <p className="text-sm mt-1" style={{ color: 'var(--color-text-muted)' }}>
             {mode === 'nodos' ? (selectedNodo ? `Haz clic en el mapa para posicionar el nodo ${nodos.find(n => n.nodo_id === selectedNodo)?.nombre || ''}` : 'Selecciona un nodo o cambia a modo dibujo')
+              : mode === 'perimetro' ? (perimetroDraft.length > 0 ? `Marca los vértices del lindero del predio (${perimetroDraft.length} puntos). Mín 3.` : (perimetroExisting ? 'Haz clic para reemplazar el perímetro existente, o solo borra' : 'Haz clic en cada esquina del predio'))
               : isDrawing ? `Haz clic para agregar puntos al ${mode === 'polygon' ? 'poligono' : 'linea'} del ${BLOCK_COLORS[drawingBlock]?.label || 'bloque'}`
               : 'Selecciona un bloque y haz clic en el mapa para dibujar'}
           </p>
@@ -219,10 +258,11 @@ export default function AdminMapaView({ predioId }) {
         <div className="flex gap-2">
           {[
             { key: 'nodos', label: 'Posicionar nodos', Icon: MousePointer },
+            { key: 'perimetro', label: 'Lindero del predio', Icon: PenTool },
             { key: 'polygon', label: 'Dibujar poligono', Icon: Square },
             { key: 'line', label: 'Dibujar linea', Icon: Minus },
           ].map(m => (
-            <button key={m.key} onClick={() => { setMode(m.key); setSelectedNodo(null); setDrawingBlock(null); setCurrentPoints([]) }}
+            <button key={m.key} onClick={() => { setMode(m.key); setSelectedNodo(null); setDrawingBlock(null); setCurrentPoints([]); setPerimetroDraft([]) }}
               className="flex items-center gap-2 px-3.5 py-2 rounded-xl text-sm font-medium transition-all"
               style={{
                 background: mode === m.key ? 'var(--color-accent-green-dim)' : 'var(--color-surface-2)',
@@ -263,6 +303,56 @@ export default function AdminMapaView({ predioId }) {
                 </button>
               )
             })}
+          </div>
+        </div>
+      )}
+
+      {/* Perímetro controls */}
+      {mode === 'perimetro' && (
+        <div className="animate-in">
+          <p className="text-[10px] font-semibold uppercase tracking-widest mb-2 px-1" style={{ color: 'var(--color-text-muted)' }}>
+            Perímetro autoritativo del predio
+          </p>
+          <div className="rounded-xl p-3" style={{ background: 'var(--color-surface-2)', border: '1px solid var(--color-border)' }}>
+            <p className="text-xs mb-3" style={{ color: 'var(--color-text-muted)' }}>
+              Marca cada esquina del lindero del predio en orden. Se guarda en backend y aparece en el Overview de todos los usuarios. Reemplaza al hull automático.
+            </p>
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-xs px-2 py-1 rounded-md font-mono" style={{ background: 'var(--color-surface-3)', color: 'var(--color-text-secondary)' }}>
+                Borrador: {perimetroDraft.length} pt{perimetroDraft.length !== 1 ? 's' : ''}
+              </span>
+              {perimetroExisting && (
+                <span className="text-xs px-2 py-1 rounded-md font-mono" style={{ background: 'var(--color-accent-green-dim)', color: 'var(--color-accent-green)' }}>
+                  Guardado: {perimetroExisting.length} pts
+                </span>
+              )}
+              {perimetroDraft.length > 0 && (
+                <button onClick={() => setPerimetroDraft(prev => prev.slice(0, -1))} className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-lg"
+                  style={{ background: 'var(--color-surface-3)', color: 'var(--color-text-muted)', border: '1px solid var(--color-border)' }}>
+                  <CornerDownLeft size={12} /> Deshacer
+                </button>
+              )}
+              {perimetroDraft.length >= 3 && (
+                <button onClick={handleSavePerimetro} disabled={savingPerimetro}
+                  className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-lg font-semibold"
+                  style={{ background: 'var(--color-accent-green-dim)', color: 'var(--color-accent-green)', border: '1px solid rgba(16,185,129,0.3)' }}>
+                  {savingPerimetro ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />} Guardar perímetro
+                </button>
+              )}
+              {perimetroDraft.length > 0 && (
+                <button onClick={() => setPerimetroDraft([])} className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-lg"
+                  style={{ background: 'var(--color-surface-3)', color: 'var(--color-accent-red)', border: '1px solid rgba(239,68,68,0.2)' }}>
+                  <X size={12} /> Cancelar borrador
+                </button>
+              )}
+              {perimetroExisting && perimetroDraft.length === 0 && (
+                <button onClick={handleDeletePerimetro} disabled={savingPerimetro}
+                  className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-lg"
+                  style={{ background: 'var(--color-glow-red)', color: 'var(--color-accent-red)', border: '1px solid rgba(239,68,68,0.2)' }}>
+                  <Trash2 size={12} /> Borrar perímetro guardado
+                </button>
+              )}
+            </div>
           </div>
         </div>
       )}
@@ -352,6 +442,19 @@ export default function AdminMapaView({ predioId }) {
           <MapContainer center={center} zoom={18} style={{ height: '100%', width: '100%' }} scrollWheelZoom={true}>
             <TileLayer key={tileMode} attribution={TILES[tileMode].attribution} url={TILES[tileMode].url} />
             <MapClickHandler onMapClick={handleMapClick} active={isActive} />
+
+            {/* Perímetro guardado del predio */}
+            {perimetroExisting && perimetroDraft.length === 0 && (
+              <Polygon positions={perimetroExisting} pathOptions={{ fillColor: '#10b981', color: '#10b981', weight: 3, fillOpacity: 0.08, dashArray: undefined }} />
+            )}
+            {/* Perímetro borrador (en edición) */}
+            {perimetroDraft.length >= 2 && (
+              <Polygon positions={perimetroDraft} pathOptions={{ fillColor: '#10b981', color: '#10b981', weight: 2, fillOpacity: 0.18, dashArray: '6 4' }} />
+            )}
+            {perimetroDraft.map((p, i) => (
+              <CircleMarker key={`perim-${i}`} center={p} radius={5}
+                pathOptions={{ fillColor: '#10b981', color: '#fff', weight: 2, fillOpacity: 1 }} />
+            ))}
 
             {/* Saved polygons */}
             {shapes.polygons.map(s => (
