@@ -1840,13 +1840,24 @@ if not STATIC_DIR.is_dir():
 if STATIC_DIR.is_dir():
     app.mount("/assets", StaticFiles(directory=STATIC_DIR / "assets"), name="assets")
 
+    NO_CACHE_HEADERS = {
+        "Cache-Control": "no-cache, no-store, must-revalidate",
+        "Pragma": "no-cache",
+        "Expires": "0",
+    }
+
     @app.get("/{path:path}")
     def serve_spa(path: str):
-        """Serve React SPA — any non-API route returns index.html."""
+        """Serve React SPA — any non-API route returns index.html.
+        index.html y sw.js NUNCA se cachean en HTTP — sólo así el browser
+        recoge los hashes nuevos de assets tras un redeploy."""
         file = STATIC_DIR / path
         if file.is_file():
+            # sw.js debe revalidarse siempre para que el SW se actualice
+            if path == "sw.js" or path.endswith(".html"):
+                return FileResponse(file, headers=NO_CACHE_HEADERS)
             return FileResponse(file)
-        return FileResponse(STATIC_DIR / "index.html")
+        return FileResponse(STATIC_DIR / "index.html", headers=NO_CACHE_HEADERS)
 
 
 # ============================================================

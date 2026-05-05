@@ -1,34 +1,21 @@
-const CACHE_NAME = 'zafra-v1'
-const STATIC_ASSETS = ['/', '/index.html']
+const CACHE_NAME = 'zafra-v2'
 
-self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(STATIC_ASSETS))
-  )
+self.addEventListener('install', () => {
+  // No precachear nada — el HTML siempre se trae fresco para no quedarse
+  // con un index.html que apunta a hashes de assets ya borrados.
   self.skipWaiting()
 })
 
 self.addEventListener('activate', (event) => {
-  event.waitUntil(
-    caches.keys().then((keys) =>
-      Promise.all(keys.filter((k) => k !== CACHE_NAME).map((k) => caches.delete(k)))
-    )
-  )
-  self.clients.claim()
+  event.waitUntil((async () => {
+    const keys = await caches.keys()
+    await Promise.all(keys.map((k) => caches.delete(k)))
+    await self.clients.claim()
+  })())
 })
 
 self.addEventListener('fetch', (event) => {
-  const { request } = event
-  // Skip non-GET, API calls, and hashed assets (they have built-in cache busting)
-  if (request.method !== 'GET' || request.url.includes('/api/') || request.url.includes('/assets/')) return
-
-  event.respondWith(
-    fetch(request)
-      .then((response) => {
-        const clone = response.clone()
-        caches.open(CACHE_NAME).then((cache) => cache.put(request, clone))
-        return response
-      })
-      .catch(() => caches.match(request))
-  )
+  // Pasamos todo a la red. Los assets con hash en el filename ya cachean
+  // bien por HTTP, y el index.html se pide siempre fresco.
+  return
 })
