@@ -10,11 +10,12 @@ import {
   Bell, Leaf, Menu, X, ChevronsLeft, ChevronsRight, Info, Star, Trash2,
   MessageCircleQuestion, Users, UserCog, History, Download, Receipt, DollarSign,
   Settings, BellRing, Plug, DatabaseBackup, BookOpen, LogOut, ChevronUp, PlusCircle, FilePenLine, MapPinned,
-  Shield, Loader2,
+  Shield, ListChecks, Loader2,
 } from 'lucide-react'
 import Loading from './components/Loading'
 
 // Lazy-loaded views for code splitting
+const HoyView = lazy(() => import('./views/HoyView'))
 const OverviewView = lazy(() => import('./views/OverviewView'))
 const NodoView = lazy(() => import('./views/NodoView'))
 const FirmaView = lazy(() => import('./views/FirmaView'))
@@ -36,8 +37,9 @@ const ExportView = lazy(() => import('./views/ExportView'))
 const AccesosView = lazy(() => import('./views/AccesosView'))
 
 const tabs = [
+  { path: '/', label: 'Hoy', icon: ListChecks },
   { path: '/predio', label: 'Predio', icon: Info },
-  { path: '/', label: 'Overview', icon: LayoutDashboard },
+  { path: '/campo', label: 'Vista campo', icon: LayoutDashboard },
   { path: '/nodo', label: 'Nodo detalle', icon: Radio },
   { path: '/firma', label: 'Firma hídrica', icon: Droplets },
   { path: '/comparativo', label: 'Comparativo', icon: GitCompareArrows },
@@ -334,7 +336,8 @@ export default function App() {
             <ErrorBoundary>
             <Suspense fallback={<Loading />}>
             <Routes>
-              <Route path="/" element={<OverviewView predioId={predioId} />} />
+              <Route path="/" element={<HoyView predioId={predioId} />} />
+              <Route path="/campo" element={<OverviewView predioId={predioId} />} />
               <Route path="/predio" element={<PredioView predioId={predioId} onChangePredio={setPredioId} predios={predios} user={user} />} />
               <Route path="/nodo" element={<NodoView predioId={predioId} />} />
               <Route path="/nodo/:id" element={<NodoView predioId={predioId} />} />
