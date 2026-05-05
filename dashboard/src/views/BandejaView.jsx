@@ -5,6 +5,7 @@ import {
   Loader2, Sparkles, ShieldAlert, FileText, Droplets, Info,
 } from 'lucide-react'
 import { useApi, apiFetch } from '../hooks/useApi'
+import { useAuth } from '../hooks/useAuth'
 import { narrate, severityRank } from '../lib/nodeNarrative'
 import NodoDetalleModal from '../components/NodoDetalleModal'
 import Tabs from '../components/Tabs'
@@ -242,12 +243,14 @@ function BubbleOut({ item }) {
 }
 
 function ChatSubtab({ predioId }) {
+  const { user } = useAuth()
   const [items, setItems] = useState(null)
   const [destino, setDestino] = useState('productor')
   const [reply, setReply] = useState('')
   const [sending, setSending] = useState(false)
   const [loadingPlantilla, setLoadingPlantilla] = useState(null)
   const [errorMsg, setErrorMsg] = useState(null)
+  const [seeding, setSeeding] = useState(false)
   const scrollRef = useRef(null)
   const inputRef = useRef(null)
 
@@ -306,6 +309,19 @@ function ChatSubtab({ predioId }) {
       setTimeout(() => setErrorMsg(null), 6000)
     } finally {
       setSending(false)
+    }
+  }
+
+  const sembrarDemo = async () => {
+    setSeeding(true)
+    try {
+      await apiFetch('/api/admin/seed-demo-chat?predio_id=' + predioId, { method: 'POST' })
+      await cargar(true)
+    } catch (e) {
+      setErrorMsg(e.message || 'Error al cargar el ejemplo')
+      setTimeout(() => setErrorMsg(null), 6000)
+    } finally {
+      setSeeding(false)
     }
   }
 
@@ -398,6 +414,22 @@ function ChatSubtab({ predioId }) {
             <MessageCircle size={32} className="mx-auto mb-3 opacity-50" />
             <p className="text-sm font-medium" style={{ color: 'var(--color-text-secondary)' }}>Sin mensajes todavía</p>
             <p className="text-[11px] mt-1.5">Usa una plantilla o escribe directo abajo. Lo que envíes y reciba el productor queda aquí.</p>
+            {user?.rol === 'admin' && (
+              <button
+                onClick={sembrarDemo}
+                disabled={seeding}
+                className="mt-4 inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
+                style={{
+                  background: 'var(--color-surface-2)',
+                  color: 'var(--color-text-primary)',
+                  border: '1px solid var(--color-border)',
+                  opacity: seeding ? 0.6 : 1,
+                }}
+              >
+                {seeding ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
+                Cargar conversación de ejemplo (para demo)
+              </button>
+            )}
           </div>
         )}
         {items && items.map(item =>
