@@ -139,6 +139,10 @@ class TratamientoCreate(BaseModel):
     notas: Optional[str] = None
 
 
+class NotaCreate(BaseModel):
+    contenido: str
+
+
 class MicrobiomaCreate(BaseModel):
     nodo_id: int
     profundidad: int = 15
@@ -239,7 +243,28 @@ def _geolocate(ip: str) -> dict:
     return result
 
 
+def _init_notas_nodo_table():
+    """Idempotent: tabla de notas que el agrónomo escribe en cada nodo."""
+    if not DATABASE_URL:
+        return
+    try:
+        execute("""
+            CREATE TABLE IF NOT EXISTS notas_nodo (
+                id        SERIAL PRIMARY KEY,
+                nodo_id   INT NOT NULL,
+                autor     VARCHAR(64),
+                contenido TEXT NOT NULL,
+                ts        TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            )
+        """)
+        execute("CREATE INDEX IF NOT EXISTS idx_notas_nodo_nodo_ts ON notas_nodo (nodo_id, ts DESC)")
+    except Exception as e:
+        import logging
+        logging.warning(f"notas_nodo table init failed: {e}")
+
+
 _init_auth_logs_table()
+_init_notas_nodo_table()
 
 
 @app.post("/api/auth/login")
@@ -857,6 +882,98 @@ def alertas_nodo(nodo_id: int, limit: int = Query(50)):
         (nodo_id, limit),
     )
     return serialize(rows)
+
+
+# ============================================================
+# NOTAS DEL NODO (agrónomo escribe sobre cada nodo)
+# ============================================================
+@app.get("/api/nodos/{nodo_id}/notas", dependencies=[Depends(verificar_token)])
+def listar_notas_nodo(nodo_id: int, limit: int = Query(100, ge=1, le=500)):
+    rows = query(
+        "SELECT id, ts, autor, contenido FROM notas_nodo WHERE nodo_id = %s ORDER BY ts DESC LIMIT %s",
+        (nodo_id, limit),
+    )
+    return serialize(rows)
+
+
+@app.post("/api/nodos/{nodo_id}/notas")
+def crear_nota_nodo(nodo_id: int, body: NotaCreate, user: dict = Depends(require_writer)):
+    contenido = (body.contenido or "").strip()
+    if not contenido:
+        raise HTTPException(400, "Contenido vacío")
+    if len(contenido) > 2000:
+        contenido = contenido[:2000]
+    nodo = query("SELECT nodo_id FROM nodos WHERE nodo_id = %s", (nodo_id,), one=True)
+    if not nodo:
+        raise HTTPException(404, f"Nodo {nodo_id} no encontrado")
+    autor = (user.get("nombre") or user.get("usuario") or "?")[:64]
+    row = query(
+        "INSERT INTO notas_nodo (nodo_id, autor, contenido) VALUES (%s, %s, %s) RETURNING id, ts, autor, contenido",
+        (nodo_id, autor, contenido),
+        one=True,
+    )
+    return serialize(row)
+
+
+@app.delete("/api/nodos/{nodo_id}/notas/{nota_id}", dependencies=[Depends(require_admin)])
+def borrar_nota_nodo(nodo_id: int, nota_id: int):
+    execute("DELETE FROM notas_nodo WHERE id = %s AND nodo_id = %s", (nota_id, nodo_id))
+    return {"status": "ok"}
+
+
+# ============================================================
+# TIMELINE DEL NODO (eventos + tratamientos + notas, ordenado cronológicamente)
+# ============================================================
+@app.get("/api/nodos/{nodo_id}/timeline", dependencies=[Depends(verificar_token)])
+def timeline_nodo(nodo_id: int, limit: int = Query(200, ge=1, le=1000)):
+    nodo = query("SELECT nodo_id FROM nodos WHERE nodo_id = %s", (nodo_id,), one=True)
+    if not nodo:
+        raise HTTPException(404, f"Nodo {nodo_id} no encontrado")
+
+    eventos = query(
+        "SELECT id, tiempo, tipo, datos FROM eventos WHERE nodo_id = %s ORDER BY tiempo DESC LIMIT %s",
+        (nodo_id, limit),
+    )
+    tratamientos = query(
+        "SELECT id, fecha, tipo, producto, cantidad, unidad, notas FROM tratamientos WHERE nodo_id = %s ORDER BY fecha DESC LIMIT %s",
+        (nodo_id, limit),
+    )
+    notas = query(
+        "SELECT id, ts, autor, contenido FROM notas_nodo WHERE nodo_id = %s ORDER BY ts DESC LIMIT %s",
+        (nodo_id, limit),
+    )
+
+    items = []
+    for e in eventos:
+        items.append({
+            "kind": "evento",
+            "id": f"e{e['id']}",
+            "ts": e["tiempo"],
+            "tipo": e["tipo"],
+            "datos": e["datos"],
+        })
+    for t in tratamientos:
+        items.append({
+            "kind": "tratamiento",
+            "id": f"t{t['id']}",
+            "ts": t["fecha"],
+            "tipo": t["tipo"],
+            "producto": t["producto"],
+            "cantidad": float(t["cantidad"]) if t["cantidad"] is not None else None,
+            "unidad": t["unidad"],
+            "contenido": t["notas"],
+        })
+    for n in notas:
+        items.append({
+            "kind": "nota",
+            "id": f"n{n['id']}",
+            "ts": n["ts"],
+            "autor": n["autor"],
+            "contenido": n["contenido"],
+        })
+
+    items.sort(key=lambda x: x["ts"])
+    return serialize(items[-limit:])
 
 
 # ============================================================
